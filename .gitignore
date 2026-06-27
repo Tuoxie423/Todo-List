@@ -1,5 +1,5 @@
-backend/gin-practice.exe
-backend/gin-practice
+backend/todo-list.exe
+backend/todo-list
 backend/*.test
 backend/coverage.out
 .gocache/

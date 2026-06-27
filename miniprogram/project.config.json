@@ -1,7 +1,7 @@
 {
-  "description": "Gin Practice Mini Program",
+  "description": "Todo-list Mini Program",
   "appid": "touristappid",
-  "projectname": "gin-practice-miniprogram",
+  "projectname": "todo-list-miniprogram",
   "miniprogramRoot": "./",
   "setting": {
     "urlCheck": true,

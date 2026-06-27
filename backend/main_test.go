@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	"gin-practice/backend/model"
+	"todo-list/backend/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"

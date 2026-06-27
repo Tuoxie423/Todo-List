@@ -1,4 +1,4 @@
-# Gin Task Room
+# Todo-list
 
 一个用于学习 Gin 后端开发的多端任务清单项目。用户通过房间名称进入独立任务空间，管理「学习清单」和「任务清单」。
 
@@ -107,7 +107,7 @@ optimization 任务清单
 ```bash
 cd backend
 go test ./...
-go build -buildvcs=false -o gin-practice .
+go build -buildvcs=false -o todo-list .
 ```
 
 ```bash
