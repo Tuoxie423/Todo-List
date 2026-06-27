@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"gin-practice/backend/config"
-	"gin-practice/backend/global"
-	"gin-practice/backend/model"
+	"todo-list/backend/config"
+	"todo-list/backend/global"
+	"todo-list/backend/model"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

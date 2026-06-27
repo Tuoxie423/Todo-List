@@ -1,4 +1,4 @@
-module gin-practice/backend
+module todo-list/backend
 
 go 1.26
 

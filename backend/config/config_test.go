@@ -22,8 +22,8 @@ func TestLoadFromPath(t *testing.T) {
 	if cfg.Server.Mode != "debug" {
 		t.Fatalf("expected backend mode debug, got %q", cfg.Server.Mode)
 	}
-	if cfg.DB.DBName != "gin_practice_test" {
-		t.Fatalf("expected db name gin_practice_test, got %q", cfg.DB.DBName)
+	if cfg.DB.DBName != "todo_list_test" {
+		t.Fatalf("expected db name todo_list_test, got %q", cfg.DB.DBName)
 	}
 }
 
@@ -37,7 +37,7 @@ func TestLoadUsesConfigPathEnv(t *testing.T) {
 		t.Fatalf("load config: %v", err)
 	}
 
-	if cfg.DB.DSN() != "root:secret@tcp(localhost:3306)/gin_practice_test?charset=utf8mb4&parseTime=True&loc=Local" {
+	if cfg.DB.DSN() != "root:secret@tcp(localhost:3306)/todo_list_test?charset=utf8mb4&parseTime=True&loc=Local" {
 		t.Fatalf("unexpected dsn: %s", cfg.DB.DSN())
 	}
 }
@@ -55,8 +55,8 @@ func TestLoadUsesConfigPathEnvFile(t *testing.T) {
 	if cfg.Server.Port != "18080" {
 		t.Fatalf("expected backend port 18080, got %q", cfg.Server.Port)
 	}
-	if cfg.DB.DBName != "gin_practice_test" {
-		t.Fatalf("expected db name gin_practice_test, got %q", cfg.DB.DBName)
+	if cfg.DB.DBName != "todo_list_test" {
+		t.Fatalf("expected db name todo_list_test, got %q", cfg.DB.DBName)
 	}
 }
 
@@ -82,7 +82,7 @@ database:
   port: 3306
   user: root
   password: secret
-  name: gin_practice_test
+  name: todo_list_test
   charset: utf8mb4
 `)
 

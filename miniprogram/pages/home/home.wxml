@@ -1,6 +1,6 @@
 <view class="page">
   <view class="hero">
-    <text class="eyebrow">Task Room</text>
+    <text class="eyebrow">Todo-list</text>
     <text class="title">进入你的任务清单房间</text>
     <text class="lead">输入房间名称，创建或进入同名清单。学习任务和日常任务都会按房间隔离保存。</text>
   </view>
