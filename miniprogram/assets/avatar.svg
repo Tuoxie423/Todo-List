@@ -1,0 +1,17 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="任务房间头像">
+  <rect width="1024" height="1024" rx="220" fill="#F7F1E4"/>
+  <path d="M168 686V342c0-34 27-61 61-61h566c34 0 61 27 61 61v344c0 34-27 61-61 61H229c-34 0-61-27-61-61Z" fill="#206B4F"/>
+  <path d="M229 334c0-18 15-33 33-33h500c18 0 33 15 33 33v320c0 18-15 33-33 33H262c-18 0-33-15-33-33V334Z" fill="#FFFAF0"/>
+  <path d="M301 280h422c36 0 65 29 65 65v24H236v-24c0-36 29-65 65-65Z" fill="#114632"/>
+  <circle cx="303" cy="326" r="18" fill="#E56F4A"/>
+  <circle cx="362" cy="326" r="18" fill="#D69B2D"/>
+  <circle cx="421" cy="326" r="18" fill="#8DAA6A"/>
+  <rect x="298" y="426" width="428" height="78" rx="24" fill="#ECF0DF"/>
+  <rect x="298" y="548" width="304" height="78" rx="24" fill="#F1E1BF"/>
+  <path d="M368 465l41 41 98-108" fill="none" stroke="#206B4F" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M368 588l41 41 98-108" fill="none" stroke="#E56F4A" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M666 523c0-70 57-127 127-127h63v291h-190V523Z" fill="#206B4F"/>
+  <path d="M715 522c0-43 35-78 78-78h15v195h-93V522Z" fill="#FFFAF0"/>
+  <circle cx="783" cy="546" r="14" fill="#D69B2D"/>
+  <path d="M230 760h564" stroke="#114632" stroke-width="36" stroke-linecap="round" opacity="0.18"/>
+</svg>

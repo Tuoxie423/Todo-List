@@ -1,0 +1,10 @@
+backend/gin-practice.exe
+backend/gin-practice
+backend/*.test
+backend/coverage.out
+.gocache/
+frontend/.DS_Store
+.agents/
+config/config.yaml
+miniprogram/project.private.config.json
+miniprogram/private.*.json

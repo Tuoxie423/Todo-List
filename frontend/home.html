@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>进入任务房间</title>
+    <link rel="stylesheet" href="./home.css" />
+  </head>
+  <body>
+    <main class="home-shell">
+      <section class="entry-panel" aria-labelledby="home-title">
+        <div class="entry-copy">
+          <p class="eyebrow">Task Room</p>
+          <h1 id="home-title">进入你的任务清单房间</h1>
+          <p class="lead">输入一个房间名称，创建或进入同名清单。学习任务和日常任务都会按房间隔离保存。</p>
+        </div>
+
+        <form class="room-form" id="roomForm">
+          <label class="room-field">
+            <span>房间名称</span>
+            <input id="roomName" name="name" type="text" maxlength="40" placeholder="例如：Go 后端练习" autocomplete="off" required />
+          </label>
+          <button class="enter-button" type="submit">进入房间</button>
+          <p class="room-message" id="roomMessage" role="status"></p>
+
+          <section class="history-panel" aria-labelledby="history-title">
+            <div class="history-heading">
+              <h2 id="history-title">历史房间</h2>
+              <button class="clear-history" id="clearHistoryButton" type="button">清空</button>
+            </div>
+            <div class="history-list" id="historyList"></div>
+          </section>
+        </form>
+      </section>
+
+      <section class="hint-strip" aria-label="项目能力">
+        <div>
+          <strong>学习清单</strong>
+          <span>记录接口、配置、部署练习</span>
+        </div>
+        <div>
+          <strong>任务清单</strong>
+          <span>记录日常待办和练习任务</span>
+        </div>
+        <div>
+          <strong>房间隔离</strong>
+          <span>不同房间拥有独立任务数据</span>
+        </div>
+      </section>
+    </main>
+
+    <script src="./home.js"></script>
+  </body>
+</html>

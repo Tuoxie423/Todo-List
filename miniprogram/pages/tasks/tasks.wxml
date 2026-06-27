@@ -1,0 +1,97 @@
+<view class="page">
+  <view class="hero">
+    <view>
+      <text class="eyebrow">Practice Lab</text>
+      <text class="title">任务台</text>
+      <text class="room-name">当前房间：{{roomName}}</text>
+    </view>
+    <view class="status-card">
+      <view class="status-dot {{apiOnline ? 'is-online' : 'is-offline'}}"></view>
+      <view>
+        <text class="status-label">Gin 后端状态</text>
+        <text class="status-text">{{apiStatus}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="metrics">
+    <view class="metric">
+      <text class="metric-number">{{totalCount}}</text>
+      <text class="metric-label">总任务</text>
+    </view>
+    <view class="metric">
+      <text class="metric-number">{{doneCount}}</text>
+      <text class="metric-label">已完成</text>
+    </view>
+    <view class="metric accent">
+      <text class="metric-number">{{progressRate}}%</text>
+      <text class="metric-label">进度</text>
+    </view>
+  </view>
+
+  <view class="panel" data-kind="learning">
+    <view class="panel-heading">
+      <view>
+        <text class="eyebrow">Study</text>
+        <text class="panel-title">学习清单</text>
+      </view>
+      <button class="ghost-button" bindtap="loadTasks">刷新</button>
+    </view>
+
+    <view class="task-form">
+      <input class="task-input" value="{{learningTitle}}" placeholder="例如：新增一个查询接口" data-kind="learning" bindinput="onTaskTitleInput" />
+      <picker value="{{learningLevelIndex}}" range="{{levels}}" data-kind="learning" bindchange="onLevelChange">
+        <view class="level-picker">{{levels[learningLevelIndex]}}</view>
+      </picker>
+      <button class="primary-button" data-kind="learning" bindtap="createTask">添加</button>
+    </view>
+
+    <text class="message">{{messages.learning}}</text>
+
+    <view wx:if="{{!hasLearningTasks}}" class="empty">学习清单是空的</view>
+    <view wx:else class="task-list">
+      <view wx:for="{{learningTasks}}" wx:key="id" class="task-item {{item.done ? 'is-done' : ''}}">
+        <button class="toggle-button" data-id="{{item.id}}" data-kind="learning" bindtap="toggleTask">✓</button>
+        <view class="task-main">
+          <text class="task-title">{{item.title}}</text>
+          <text class="task-meta">{{item.level}} · {{item.createdAtText}}</text>
+        </view>
+        <button class="danger-button" data-id="{{item.id}}" data-kind="learning" bindtap="deleteTask">×</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="panel optimization-panel" data-kind="optimization">
+    <view class="panel-heading">
+      <view>
+        <text class="eyebrow optimize">Tasks</text>
+        <text class="panel-title">任务清单</text>
+      </view>
+      <button class="ghost-button" bindtap="loadTasks">刷新</button>
+    </view>
+
+    <view class="task-form">
+      <input class="task-input" value="{{optimizationTitle}}" placeholder="例如：整理部署步骤" data-kind="optimization" bindinput="onTaskTitleInput" />
+      <picker value="{{optimizationLevelIndex}}" range="{{levels}}" data-kind="optimization" bindchange="onLevelChange">
+        <view class="level-picker">{{levels[optimizationLevelIndex]}}</view>
+      </picker>
+      <button class="primary-button dark" data-kind="optimization" bindtap="createTask">添加</button>
+    </view>
+
+    <text class="message">{{messages.optimization}}</text>
+
+    <view wx:if="{{!hasOptimizationTasks}}" class="empty">任务清单是空的</view>
+    <view wx:else class="task-list">
+      <view wx:for="{{optimizationTasks}}" wx:key="id" class="task-item {{item.done ? 'is-done' : ''}}">
+        <button class="toggle-button" data-id="{{item.id}}" data-kind="optimization" bindtap="toggleTask">✓</button>
+        <view class="task-main">
+          <text class="task-title">{{item.title}}</text>
+          <text class="task-meta">{{item.level}} · {{item.createdAtText}}</text>
+        </view>
+        <button class="danger-button" data-id="{{item.id}}" data-kind="optimization" bindtap="deleteTask">×</button>
+      </view>
+    </view>
+  </view>
+
+  <button class="change-room" bindtap="changeRoom">切换房间</button>
+</view>

@@ -1,0 +1,43 @@
+<view class="page">
+  <view class="hero">
+    <text class="eyebrow">Task Room</text>
+    <text class="title">进入你的任务清单房间</text>
+    <text class="lead">输入房间名称，创建或进入同名清单。学习任务和日常任务都会按房间隔离保存。</text>
+  </view>
+
+  <view class="entry-panel">
+    <view class="field">
+      <text class="label">房间名称</text>
+      <input class="input" value="{{roomName}}" maxlength="40" placeholder="例如：Go 后端练习" bindinput="onRoomNameInput" confirm-type="go" bindconfirm="enterRoomSubmit" />
+    </view>
+
+    <button class="enter-button" loading="{{loading}}" disabled="{{loading}}" bindtap="enterRoomSubmit">进入房间</button>
+    <text class="message">{{message}}</text>
+
+    <view class="history-panel">
+      <view class="history-heading">
+        <text class="history-title">历史房间</text>
+        <button class="clear-button" disabled="{{!hasHistory}}" bindtap="clearHistory">清空</button>
+      </view>
+
+      <view wx:if="{{!hasHistory}}" class="history-empty">还没有进入过房间</view>
+      <view wx:else class="history-list">
+        <button wx:for="{{history}}" wx:key="id" class="history-item" data-id="{{item.id}}" bindtap="enterHistoryRoom">
+          <text>{{item.name}}</text>
+          <text class="visited-at">{{item.visitedAtText}}</text>
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <view class="hint-grid">
+    <view class="hint">
+      <text class="hint-title">学习清单</text>
+      <text class="hint-copy">记录接口、配置、部署练习</text>
+    </view>
+    <view class="hint">
+      <text class="hint-title">任务清单</text>
+      <text class="hint-copy">记录日常待办和练习任务</text>
+    </view>
+  </view>
+</view>

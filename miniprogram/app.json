@@ -1,0 +1,14 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/tasks/tasks"
+  ],
+  "window": {
+    "navigationBarTitleText": "任务房间",
+    "navigationBarBackgroundColor": "#f7f1e4",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f7f1e4"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

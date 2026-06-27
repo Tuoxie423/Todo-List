@@ -1,0 +1,15 @@
+backend:
+  port: 18080
+  mode: release
+
+frontend:
+  port: 18090
+  apiBase: http://localhost:18080
+
+database:
+  host: localhost
+  port: 3306
+  user: your_username
+  password: your_password
+  name: list
+  charset: utf8mb4
