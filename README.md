@@ -150,4 +150,4 @@ miniprogram/utils/config.js
 
 ## License
 
-建议按需补充开源协议，例如 MIT License。
+MIT License。
