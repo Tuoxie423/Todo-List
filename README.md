@@ -1,8 +1,29 @@
-# Todo-list
+﻿# 一间清单 Todo-list
+
+![Go](https://img.shields.io/badge/Go-1.26-00ADD8?style=flat-square&logo=go&logoColor=white)
+![Gin](https://img.shields.io/badge/Gin-Web%20Framework-00B386?style=flat-square)
+![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1?style=flat-square&logo=mysql&logoColor=white)
+![Mini Program](https://img.shields.io/badge/WeChat-Mini%20Program-07C160?style=flat-square&logo=wechat&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+![Website](https://img.shields.io/badge/Online-list.tuoxie.asia-orange?style=flat-square)
 
 一个用于学习 Gin 后端开发的多端任务清单项目。用户通过房间名称进入独立任务空间，管理「学习清单」和「任务清单」。
 
 同一套 Gin API 同时支持浏览器端和微信小程序端。
+
+如果这个项目对你学习 Gin、GORM、前后端分离或部署上线有帮助，欢迎点一个 Star。
+
+## 在线访问
+
+https://list.tuoxie.asia
+
+同名小程序（一间清单）正在发布中。
+
+## 预览
+
+![截图](./media/todo-pic.png)
+
+[查看动图演示](./media/todo-gif.gif)
 
 ## 功能
 
@@ -12,6 +33,12 @@
 - 新增、完成/恢复、删除任务
 - 浏览器端和小程序端历史房间记录
 - YAML 配置端口和数据库连接
+
+## 项目亮点
+
+- 适合 Gin 初学者练习完整项目流程
+- 浏览器端和小程序端共用同一套后端接口
+- 包含配置管理、数据库关联、接口设计和部署实践
 
 ## 技术栈
 
@@ -36,30 +63,10 @@ config/        配置示例
 CREATE DATABASE list DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-复制配置：
+复制并配置 `config.yaml`：
 
 ```bash
 cp config/config.example.yaml config/config.yaml
-```
-
-修改 `config/config.yaml`：
-
-```yaml
-backend:
-  port: 18080
-  mode: release
-
-frontend:
-  port: 18090
-  apiBase: http://localhost:18080
-
-database:
-  host: localhost
-  port: 3306
-  user: your_username
-  password: your_password
-  name: list
-  charset: utf8mb4
 ```
 
 启动后端：
@@ -116,38 +123,6 @@ node --check frontend/home.js
 node --check frontend/app.js
 ```
 
-## 部署
-
-推荐使用 Nginx 反向代理：
-
-```text
-/       -> 127.0.0.1:18090
-/api/   -> 127.0.0.1:18080
-/health -> 127.0.0.1:18080
-```
-
-线上环境把前端 API 地址改为 HTTPS 域名，例如：
-
-```yaml
-frontend:
-  apiBase: https://list.tuoxie.asia
-```
-
-小程序接口地址在：
-
-```text
-miniprogram/utils/config.js
-```
-
-## 开源注意
-
-不要提交：
-
-- `config/config.yaml`
-- 数据库账号密码
-- 后端编译产物
-- `miniprogram/project.private.config.json`
-
 ## License
 
-MIT License。
+MIT License
