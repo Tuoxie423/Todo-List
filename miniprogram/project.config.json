@@ -1,6 +1,6 @@
 {
   "description": "Todo-list Mini Program",
-  "appid": "wxc13a7f247e350875",
+  "appid": "your-appid",
   "projectname": "todo-list-miniprogram",
   "miniprogramRoot": "./",
   "setting": {
