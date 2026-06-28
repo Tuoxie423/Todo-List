@@ -51,6 +51,24 @@
   padding: 28rpx;
 }
 
+
+.wechat-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+  padding: 18rpx 20rpx;
+  border: 1rpx solid #d9cfb8;
+  border-radius: 12rpx;
+  background: #fffaf0;
+}
+
+.wechat-name {
+  display: block;
+  color: #1f2520;
+  font-size: 30rpx;
+  font-weight: 850;
+}
 .field {
   display: block;
 }

@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   min-height: 100vh;
   padding: 28rpx 28rpx 56rpx;
   background:
@@ -232,6 +232,7 @@
 .task-item {
   display: flex;
   align-items: center;
+  width: 100%;
   padding: 20rpx;
   border: 1rpx solid #d9cfb8;
   border-radius: 12rpx;
@@ -248,15 +249,20 @@
 
 .toggle-button {
   display: flex;
+  flex: 0 0 66rpx;
   align-items: center;
   justify-content: center;
   width: 66rpx;
+  height: 66rpx;
   min-height: 66rpx;
+  margin: 0;
+  padding: 0;
   border: 3rpx solid #206b4f;
   border-radius: 999rpx;
   color: transparent;
   background: transparent;
   font-size: 28rpx;
+  line-height: 66rpx;
 }
 
 .task-item.is-done .toggle-button {
@@ -265,7 +271,7 @@
 }
 
 .task-main {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
   margin: 0 16rpx;
 }
@@ -275,7 +281,8 @@
   font-size: 30rpx;
   font-weight: 850;
   line-height: 1.35;
-  word-break: break-all;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .task-item.is-done .task-title {
@@ -288,12 +295,17 @@
 }
 
 .danger-button {
+  flex: 0 0 70rpx;
   width: 70rpx;
+  height: 66rpx;
   min-height: 66rpx;
+  margin: 0;
+  padding: 0;
   color: #e56f4a;
   background: rgba(229, 111, 74, 0.1);
   font-size: 34rpx;
   font-weight: 850;
+  line-height: 66rpx;
 }
 
 .empty {

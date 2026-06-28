@@ -1,8 +1,11 @@
+const auth = require("../../utils/auth");
 const { request } = require("../../utils/request");
 const roomHistory = require("../../utils/roomHistory");
 
 Page({
   data: {
+    user: null,
+    loginLoading: true,
     roomName: "",
     message: "",
     loading: false,
@@ -10,27 +13,61 @@ Page({
     hasHistory: false,
   },
 
-  onShow() {
+  async onShow() {
+    await this.ensureWechatLogin();
     this.refreshHistory();
   },
 
-  onRoomNameInput(event) {
+  async ensureWechatLogin() {
+    this.setData({ loginLoading: true, message: "正在微信登录..." });
+
+    try {
+      const user = await auth.ensureLogin();
+      this.setData({
+        user,
+        loginLoading: false,
+        message: "微信登录成功",
+      });
+    } catch (error) {
+      this.setData({
+        user: null,
+        loginLoading: false,
+        message: error.message || "微信登录失败，请稍后重试",
+      });
+    }
+  },
+
+  async relogin() {
+    auth.clearCurrentUser();
+    roomHistory.clearCurrentList();
+    await this.ensureWechatLogin();
+    this.refreshHistory();
+  },
+
+  onListNameInput(event) {
     this.setData({
       roomName: event.detail.value,
       message: "",
     });
   },
 
-  async enterRoomSubmit() {
+  async enterListSubmit() {
+    if (!this.data.user) {
+      await this.ensureWechatLogin();
+      if (!this.data.user) {
+        return;
+      }
+    }
+
     const name = this.data.roomName.trim();
     if (!name) {
-      this.setData({ message: "房间名称不能为空" });
+      this.setData({ message: "清单名称不能为空" });
       return;
     }
 
     this.setData({
       loading: true,
-      message: "正在进入房间...",
+      message: "正在查看清单...",
     });
 
     try {
@@ -38,7 +75,7 @@ Page({
         method: "POST",
         data: { name },
       });
-      this.openRoom(room);
+      this.openList(room);
     } catch (error) {
       this.setData({
         message: error.message,
@@ -47,7 +84,7 @@ Page({
     }
   },
 
-  enterHistoryRoom(event) {
+  enterHistoryList(event) {
     const roomID = Number(event.currentTarget.dataset.id);
     const room = roomHistory.getHistory().find((item) => Number(item.id) === roomID);
     if (!room) {
@@ -55,7 +92,7 @@ Page({
       return;
     }
 
-    this.openRoom(room);
+    this.openList(room);
   },
 
   clearHistory() {
@@ -63,9 +100,9 @@ Page({
     this.refreshHistory();
   },
 
-  openRoom(room) {
-    const history = roomHistory.rememberRoom(room);
-    roomHistory.saveCurrentRoom(room);
+  openList(room) {
+    const history = roomHistory.rememberList(room);
+    roomHistory.saveCurrentList(room);
     this.setData({
       history: formatHistory(history),
       hasHistory: history.length > 0,

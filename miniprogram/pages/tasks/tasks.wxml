@@ -3,7 +3,7 @@
     <view>
       <text class="eyebrow">Practice Lab</text>
       <text class="title">任务台</text>
-      <text class="room-name">当前房间：{{roomName}}</text>
+      <text class="room-name">当前清单：{{roomName}}</text>
     </view>
     <view class="status-card">
       <view class="status-dot {{apiOnline ? 'is-online' : 'is-offline'}}"></view>
@@ -93,5 +93,5 @@
     </view>
   </view>
 
-  <button class="change-room" bindtap="changeRoom">切换房间</button>
+  <button class="change-room" bindtap="changeList">切换清单</button>
 </view>

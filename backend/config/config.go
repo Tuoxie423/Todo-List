@@ -14,6 +14,11 @@ type Server struct {
 	Port string `mapstructure:"port"`
 }
 
+type WeChat struct {
+	AppID     string `mapstructure:"appid"`
+	AppSecret string `mapstructure:"secret"`
+}
+
 type DB struct {
 	Host     string `mapstructure:"host"`
 	Port     int    `mapstructure:"port"`
@@ -26,6 +31,7 @@ type DB struct {
 type Config struct {
 	Server Server `mapstructure:"backend"`
 	DB     DB     `mapstructure:"database"`
+	WeChat WeChat `mapstructure:"wechat"`
 }
 
 var Global Config
@@ -42,7 +48,7 @@ func LoadConfig() {
 	}
 
 	Global = cfg
-	log.Println("配置加载完成：mode =", Global.Server.Mode, "port =", Global.Server.Port)
+	log.Println("config loaded: mode =", Global.Server.Mode, "port =", Global.Server.Port)
 }
 
 func Load() (Config, error) {

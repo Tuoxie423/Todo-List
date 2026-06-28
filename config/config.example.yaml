@@ -13,3 +13,7 @@ database:
   password: your_password
   name: list
   charset: utf8mb4
+
+wechat:
+  appid: your_wechat_appid
+  secret: your_wechat_secret

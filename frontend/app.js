@@ -1,5 +1,7 @@
 let apiBase = "http://localhost:18080";
-let currentRoom = null;
+let currentUser = null;
+let currentList = null;
+const authKey = "taskUser";
 
 const listMeta = {
   learning: {
@@ -16,7 +18,7 @@ const elements = {
   apiStatus: document.querySelector("#apiStatus"),
   statusDot: document.querySelector("#statusDot"),
   roomName: document.querySelector("#roomName"),
-  changeRoomButton: document.querySelector("#changeRoomButton"),
+  changeListButton: document.querySelector("#changeListButton"),
   totalCount: document.querySelector("#totalCount"),
   doneCount: document.querySelector("#doneCount"),
   progressRate: document.querySelector("#progressRate"),
@@ -26,8 +28,13 @@ const elements = {
 let tasks = [];
 
 async function request(path, options = {}) {
+  const headers = { "Content-Type": "application/json", ...options.headers };
+  if (currentUser && currentUser.token) {
+    headers.Authorization = `Bearer ${currentUser.token}`;
+  }
+
   const response = await fetch(`${apiBase}${path}`, {
-    headers: { "Content-Type": "application/json", ...options.headers },
+    headers,
     ...options,
   });
 
@@ -57,36 +64,60 @@ async function loadConfig() {
   }
 }
 
-function loadCurrentRoom() {
+function loadCurrentUser() {
+  try {
+    const savedUser = JSON.parse(localStorage.getItem(authKey));
+    if (savedUser && Number(savedUser.id) > 0 && savedUser.username && savedUser.token) {
+      currentUser = {
+        id: Number(savedUser.id),
+        username: savedUser.username,
+        token: savedUser.token,
+      };
+    }
+  } catch (error) {
+    localStorage.removeItem(authKey);
+  }
+}
+
+function requireUser() {
+  if (currentUser) {
+    return true;
+  }
+
+  localStorage.removeItem("taskList");
+  window.location.href = "./home.html";
+  return false;
+}
+function loadCurrentList() {
   const params = new URLSearchParams(window.location.search);
   const roomID = Number(params.get("roomId"));
   const roomName = params.get("roomName");
 
   if (roomID > 0 && roomName) {
-    currentRoom = {
+    currentList = {
       id: roomID,
       name: roomName,
     };
-    localStorage.setItem("taskRoom", JSON.stringify(currentRoom));
+    localStorage.setItem("taskList", JSON.stringify(currentList));
     return;
   }
 
   try {
-    const savedRoom = JSON.parse(localStorage.getItem("taskRoom"));
-    if (savedRoom && Number(savedRoom.id) > 0 && savedRoom.name) {
-      currentRoom = {
-        id: Number(savedRoom.id),
-        name: savedRoom.name,
+    const savedList = JSON.parse(localStorage.getItem("taskList"));
+    if (savedList && Number(savedList.id) > 0 && savedList.name) {
+      currentList = {
+        id: Number(savedList.id),
+        name: savedList.name,
       };
     }
   } catch (error) {
-    localStorage.removeItem("taskRoom");
+    localStorage.removeItem("taskList");
   }
 }
 
-function requireRoom() {
-  if (currentRoom) {
-    elements.roomName.textContent = currentRoom.name;
+function requireList() {
+  if (currentList) {
+    elements.roomName.textContent = currentList.name;
     return true;
   }
 
@@ -107,7 +138,7 @@ async function checkHealth() {
 
 async function loadTasks() {
   try {
-    const data = await request(`/api/rooms/${currentRoom.id}/tasks`);
+    const data = await request(`/api/rooms/${currentList.id}/tasks`);
     tasks = data.items || [];
     renderAll();
     setAllMessages("列表已更新");
@@ -131,7 +162,7 @@ async function createTask(event) {
   }
 
   try {
-    const task = await request(`/api/rooms/${currentRoom.id}/tasks`, {
+    const task = await request(`/api/rooms/${currentList.id}/tasks`, {
       method: "POST",
       body: JSON.stringify({
         title,
@@ -151,7 +182,7 @@ async function createTask(event) {
 
 async function toggleTask(id, kind) {
   try {
-    const updated = await request(`/api/rooms/${currentRoom.id}/tasks/${id}/toggle`, { method: "PATCH" });
+    const updated = await request(`/api/rooms/${currentList.id}/tasks/${id}/toggle`, { method: "PATCH" });
     tasks = tasks.map((task) => (task.id === id ? updated : task));
     renderAll();
     setMessage(kind, updated.done ? "任务已完成" : "任务已恢复");
@@ -162,7 +193,7 @@ async function toggleTask(id, kind) {
 
 async function deleteTask(id, kind) {
   try {
-    await request(`/api/rooms/${currentRoom.id}/tasks/${id}`, { method: "DELETE" });
+    await request(`/api/rooms/${currentList.id}/tasks/${id}`, { method: "DELETE" });
     tasks = tasks.filter((task) => task.id !== id);
     renderAll();
     setMessage(kind, "任务已删除");
@@ -268,15 +299,19 @@ for (const panel of elements.panels) {
   });
 }
 
-elements.changeRoomButton.addEventListener("click", () => {
-  localStorage.removeItem("taskRoom");
+elements.changeListButton.addEventListener("click", () => {
+  localStorage.removeItem("taskList");
   window.location.href = "./home.html";
 });
 
 async function init() {
   await loadConfig();
-  loadCurrentRoom();
-  if (!requireRoom()) {
+  loadCurrentUser();
+  if (!requireUser()) {
+    return;
+  }
+  loadCurrentList();
+  if (!requireList()) {
     return;
   }
   checkHealth();

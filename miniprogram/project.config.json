@@ -1,6 +1,6 @@
 {
   "description": "Todo-list Mini Program",
-  "appid": "touristappid",
+  "appid": "wxc13a7f247e350875",
   "projectname": "todo-list-miniprogram",
   "miniprogramRoot": "./",
   "setting": {
@@ -34,5 +34,6 @@
     "ignore": [],
     "include": []
   },
-  "editorSetting": {}
+  "editorSetting": {},
+  "libVersion": "3.16.1"
 }

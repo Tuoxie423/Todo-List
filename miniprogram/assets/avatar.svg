@@ -1,4 +1,4 @@
-<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="任务房间头像">
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="任务清单头像">
   <rect width="1024" height="1024" rx="220" fill="#F7F1E4"/>
   <path d="M168 686V342c0-34 27-61 61-61h566c34 0 61 27 61 61v344c0 34-27 61-61 61H229c-34 0-61-27-61-61Z" fill="#206B4F"/>
   <path d="M229 334c0-18 15-33 33-33h500c18 0 33 15 33 33v320c0 18-15 33-33 33H262c-18 0-33-15-33-33V334Z" fill="#FFFAF0"/>

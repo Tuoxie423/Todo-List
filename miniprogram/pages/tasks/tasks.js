@@ -1,3 +1,4 @@
+const auth = require("../../utils/auth");
 const { request } = require("../../utils/request");
 const roomHistory = require("../../utils/roomHistory");
 
@@ -41,14 +42,14 @@ Page({
   },
 
   onLoad(options) {
-    const room = this.resolveRoom(options || {});
+    const room = this.resolveList(options || {});
     if (!room) {
       wx.redirectTo({ url: "/pages/home/home" });
       return;
     }
 
-    roomHistory.saveCurrentRoom(room);
-    roomHistory.rememberRoom(room);
+    roomHistory.saveCurrentList(room);
+    roomHistory.rememberList(room);
     this.setData({
       room,
       roomName: room.name,
@@ -57,7 +58,7 @@ Page({
     this.loadTasks();
   },
 
-  resolveRoom(options) {
+  resolveList(options) {
     const roomID = Number(options.roomId);
     const roomName = decodeURIComponent(options.roomName || "");
     if (roomID > 0 && roomName) {
@@ -67,7 +68,7 @@ Page({
       };
     }
 
-    return roomHistory.getCurrentRoom();
+    return roomHistory.getCurrentList();
   },
 
   async checkHealth() {
@@ -193,8 +194,8 @@ Page({
     });
   },
 
-  changeRoom() {
-    roomHistory.clearCurrentRoom();
+  changeList() {
+    roomHistory.clearCurrentList();
     wx.redirectTo({ url: "/pages/home/home" });
   },
 

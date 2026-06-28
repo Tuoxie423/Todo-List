@@ -77,6 +77,10 @@ func writeTestConfig(t *testing.T, dir string) {
   port: 18080
   mode: debug
 
+wechat:
+  appid: wx-test-appid
+  secret: wx-test-secret
+
 database:
   host: localhost
   port: 3306
