@@ -8,3 +8,7 @@ frontend/.DS_Store
 config/config.yaml
 miniprogram/project.private.config.json
 miniprogram/private.*.json
+*.log
+backend/*.log
+frontend/*.log
+.env
