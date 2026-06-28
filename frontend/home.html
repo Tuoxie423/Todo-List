@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>进入任务房间</title>
+    <title>登录后查看任务清单</title>
     <link rel="stylesheet" href="./home.css" />
   </head>
   <body>
@@ -11,40 +11,78 @@
       <section class="entry-panel" aria-labelledby="home-title">
         <div class="entry-copy">
           <p class="eyebrow">Todo-list</p>
-          <h1 id="home-title">进入你的任务清单房间</h1>
-          <p class="lead">输入一个房间名称，创建或进入同名清单。学习任务和日常任务都会按房间隔离保存。</p>
+          <h1 id="home-title">&#30331;&#24405;&#20320;&#30340;&#20219;&#21153;&#24037;&#20316;&#21488;</h1>
+          <p class="lead">&#36755;&#20837;&#36134;&#21495;&#21644;&#23494;&#30721;&#21363;&#21487;&#36827;&#20837;&#12290;&#39318;&#27425;&#20351;&#29992;&#30340;&#36134;&#21495;&#20250;&#33258;&#21160;&#27880;&#20876;&#65292;&#24050;&#26377;&#36134;&#21495;&#21017;&#20250;&#26657;&#39564;&#23494;&#30721;&#21518;&#30331;&#24405;&#12290;</p>
         </div>
 
-        <form class="room-form" id="roomForm">
-          <label class="room-field">
-            <span>房间名称</span>
-            <input id="roomName" name="name" type="text" maxlength="40" placeholder="例如：Go 后端练习" autocomplete="off" required />
-          </label>
-          <button class="enter-button" type="submit">进入房间</button>
-          <p class="room-message" id="roomMessage" role="status"></p>
-
-          <section class="history-panel" aria-labelledby="history-title">
-            <div class="history-heading">
-              <h2 id="history-title">历史房间</h2>
-              <button class="clear-history" id="clearHistoryButton" type="button">清空</button>
+        <div class="entry-stack">
+          <form class="auth-form" id="authForm">
+            <div class="form-heading">
+              <p class="eyebrow">Account</p>
+              <h2>&#36134;&#21495;&#30331;&#24405;</h2>
             </div>
-            <div class="history-list" id="historyList"></div>
+            <label class="entry-field">
+              <span>&#29992;&#25143;&#21517;</span>
+              <input id="username" name="username" type="text" maxlength="40" placeholder="&#20363;&#22914;&#65306;alice" autocomplete="username" required />
+            </label>
+            <label class="entry-field">
+              <span>&#23494;&#30721;</span>
+              <input id="password" name="password" type="password" minlength="6" placeholder="&#33267;&#23569; 6 &#20301;" autocomplete="current-password" required />
+            </label>
+            <button class="enter-button" type="submit">&#30331;&#24405; / &#33258;&#21160;&#27880;&#20876;</button>
+            <p class="room-message" id="authMessage" role="status"></p>
+
+            <section class="history-panel" aria-labelledby="account-history-title">
+              <div class="history-heading">
+                <h2 id="account-history-title">&#30331;&#24405;&#21382;&#21490;</h2>
+                <button class="clear-history" id="clearAccountHistoryButton" type="button">&#28165;&#31354;</button>
+              </div>
+              <div class="history-list" id="accountHistoryList"></div>
+            </section>          </form>
+
+          <section class="signed-panel" id="signedPanel" hidden>
+            <div>
+              <span>&#24403;&#21069;&#29992;&#25143;</span>
+              <strong id="currentUsername">-</strong>
+            </div>
+            <button class="clear-history" id="logoutButton" type="button">&#36864;&#20986;</button>
           </section>
-        </form>
+
+          <form class="room-form" id="roomForm" hidden>
+            <div class="form-heading">
+              <p class="eyebrow">List</p>
+              <h2>查看清单</h2>
+            </div>
+            <label class="entry-field">
+              <span>清单名称</span>
+              <input id="roomName" name="name" type="text" maxlength="40" placeholder="&#20363;&#22914;&#65306;Go &#21518;&#31471;&#32451;&#20064;" autocomplete="off" required />
+            </label>
+            <button class="enter-button" type="submit">查看清单</button>
+            <p class="room-message" id="roomMessage" role="status"></p>
+
+            <section class="history-panel" aria-labelledby="history-title">
+              <div class="history-heading">
+                <h2 id="history-title">历史清单</h2>
+                <button class="clear-history" id="clearHistoryButton" type="button">&#28165;&#31354;</button>
+              </div>
+              <div class="history-list" id="historyList"></div>
+            </section>
+          </form>
+        </div>
       </section>
 
-      <section class="hint-strip" aria-label="项目能力">
+      <section class="hint-strip" aria-label="&#39033;&#30446;&#33021;&#21147;">
         <div>
-          <strong>学习清单</strong>
-          <span>记录接口、配置、部署练习</span>
+          <strong>&#29992;&#25143;&#38548;&#31163;</strong>
+          <span>每个用户的本地清单记录独立保存</span>
         </div>
         <div>
-          <strong>任务清单</strong>
-          <span>记录日常待办和练习任务</span>
+          <strong>&#23494;&#30721;&#21152;&#23494;</strong>
+          <span>&#21518;&#31471;&#20351;&#29992; bcrypt &#20445;&#23384;&#23494;&#30721;&#21704;&#24076;</span>
         </div>
         <div>
-          <strong>房间隔离</strong>
-          <span>不同房间拥有独立任务数据</span>
+          <strong>&#33258;&#21160;&#27880;&#20876;</strong>
+          <span>&#26032;&#36134;&#21495;&#39318;&#27425;&#30331;&#24405;&#26102;&#20250;&#33258;&#21160;&#21019;&#24314;</span>
         </div>
       </section>
     </main>

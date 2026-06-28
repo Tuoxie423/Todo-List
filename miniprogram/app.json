@@ -4,7 +4,7 @@
     "pages/tasks/tasks"
   ],
   "window": {
-    "navigationBarTitleText": "任务房间",
+    "navigationBarTitleText": "任务清单",
     "navigationBarBackgroundColor": "#f7f1e4",
     "navigationBarTextStyle": "black",
     "backgroundColor": "#f7f1e4"

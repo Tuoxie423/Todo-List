@@ -1,16 +1,26 @@
 const config = require("./config");
 
+const authKey = "taskUser";
+
 function request(path, options) {
   const requestOptions = options || {};
+  const header = Object.assign({
+    "Content-Type": "application/json",
+  }, requestOptions.header || {});
+
+  if (!requestOptions.skipAuth) {
+    const user = getStoredUser();
+    if (user && user.token) {
+      header.Authorization = `Bearer ${user.token}`;
+    }
+  }
 
   return new Promise((resolve, reject) => {
     wx.request({
       url: `${config.apiBase}${path}`,
       method: requestOptions.method || "GET",
       data: requestOptions.data || {},
-      header: Object.assign({
-        "Content-Type": "application/json",
-      }, requestOptions.header || {}),
+      header,
       success(response) {
         const statusCode = response.statusCode;
 
@@ -27,6 +37,15 @@ function request(path, options) {
       },
     });
   });
+}
+
+function getStoredUser() {
+  try {
+    const user = wx.getStorageSync(authKey);
+    return user && user.token ? user : null;
+  } catch (error) {
+    return null;
+  }
 }
 
 module.exports = {
