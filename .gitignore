@@ -7,6 +7,7 @@ frontend/.DS_Store
 .agents/
 config/config.yaml
 miniprogram/project.private.config.json
+miniprogram/project.config.json
 miniprogram/private.*.json
 *.log
 backend/*.log
