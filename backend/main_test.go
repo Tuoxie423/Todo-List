@@ -3,9 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 
 	"todo-list/backend/model"
@@ -101,7 +104,8 @@ func TestWeChatLoginAutoRegistersAndReusesUser(t *testing.T) {
 	if err := json.Unmarshal(first.Body.Bytes(), &firstBody); err != nil {
 		t.Fatalf("decode wechat login body: %v", err)
 	}
-	if !firstBody.Registered || firstBody.User.Token == "" || firstBody.User.Username != "wx_openid-alice" {
+	expectedUsername := fmt.Sprintf("\u5fae\u4fe1\u7528\u6237%d", firstBody.User.ID)
+	if !firstBody.Registered || firstBody.User.Token == "" || firstBody.User.Username != expectedUsername || strings.Contains(firstBody.User.Username, "openid") {
 		t.Fatalf("unexpected first login body: %+v", firstBody)
 	}
 
@@ -121,6 +125,46 @@ func TestWeChatLoginAutoRegistersAndReusesUser(t *testing.T) {
 	}
 }
 
+func TestWeChatLoginRenamesOldOpenIDUsername(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := setupTestDB(t)
+	openID := "openid-alice"
+	user := model.User{Username: "wx_openid-alice", OpenID: &openID, PasswordHash: "-"}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("create old wechat user: %v", err)
+	}
+
+	oldExchange := exchangeWeChatCode
+	exchangeWeChatCode = func(code string) (wechatSession, error) {
+		return wechatSession{OpenID: openID}, nil
+	}
+	defer func() { exchangeWeChatCode = oldExchange }()
+	router := setupRouter(db)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/api/auth/wechat-login", bytes.NewBufferString(`{"code":"wx-code"}`))
+	request.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", response.Code, response.Body.String())
+	}
+
+	var body struct {
+		User struct {
+			ID       int    `json:"id"`
+			Username string `json:"username"`
+		} `json:"user"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode wechat login body: %v", err)
+	}
+	expectedUsername := fmt.Sprintf("\u5fae\u4fe1\u7528\u6237%d", user.ID)
+	if body.User.Username != expectedUsername || strings.Contains(body.User.Username, "openid") {
+		t.Fatalf("unexpected renamed user: %+v", body.User)
+	}
+}
+
 func TestWeChatLoginValidatesCode(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := setupTestDB(t)
@@ -133,6 +177,30 @@ func TestWeChatLoginValidatesCode(t *testing.T) {
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", response.Code)
+	}
+}
+
+func TestWeChatLoginDoesNotExposeExchangeError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := setupTestDB(t)
+	oldExchange := exchangeWeChatCode
+	exchangeWeChatCode = func(code string) (wechatSession, error) {
+		return wechatSession{}, errors.New(`Get "https://api.weixin.qq.com/sns/jscode2session?appid=wx-test&secret=real-secret&js_code=bad": timeout`)
+	}
+	defer func() { exchangeWeChatCode = oldExchange }()
+	router := setupRouter(db)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/api/auth/wechat-login", bytes.NewBufferString(`{"code":"wx-code"}`))
+	request.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadGateway {
+		t.Fatalf("expected 502, got %d", response.Code)
+	}
+	body := response.Body.String()
+	if strings.Contains(body, "real-secret") || strings.Contains(body, "secret=") || strings.Contains(body, "api.weixin.qq.com") {
+		t.Fatalf("wechat error leaked sensitive details: %s", body)
 	}
 }
 func TestLoginAutoRegistersAndStoresPasswordHashAndTokenHash(t *testing.T) {
@@ -549,5 +617,27 @@ func TestDeleteRoomTaskRejectsOtherUsersRoom(t *testing.T) {
 	db.Model(&model.Task{}).Where("id = ?", task.ID).Count(&count)
 	if count != 1 {
 		t.Fatalf("expected alice task to remain, got count %d", count)
+	}
+}
+
+func TestCORSMiddlewareRestrictsOrigins(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := setupTestDB(t)
+	router := setupRouter(db)
+
+	allowed := httptest.NewRecorder()
+	allowedRequest := httptest.NewRequest(http.MethodOptions, "/api/auth/login", nil)
+	allowedRequest.Header.Set("Origin", "https://list.tuoxie.asia")
+	router.ServeHTTP(allowed, allowedRequest)
+	if allowed.Code != http.StatusNoContent || allowed.Header().Get("Access-Control-Allow-Origin") != "https://list.tuoxie.asia" {
+		t.Fatalf("expected allowed CORS preflight, got %d with origin %q", allowed.Code, allowed.Header().Get("Access-Control-Allow-Origin"))
+	}
+
+	blocked := httptest.NewRecorder()
+	blockedRequest := httptest.NewRequest(http.MethodOptions, "/api/auth/login", nil)
+	blockedRequest.Header.Set("Origin", "https://evil.example")
+	router.ServeHTTP(blocked, blockedRequest)
+	if blocked.Code != http.StatusForbidden || blocked.Header().Get("Access-Control-Allow-Origin") != "" {
+		t.Fatalf("expected blocked CORS preflight, got %d with origin %q", blocked.Code, blocked.Header().Get("Access-Control-Allow-Origin"))
 	}
 }

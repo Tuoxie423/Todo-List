@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -332,7 +333,8 @@ func loginWithWeChat(c *gin.Context, db *gorm.DB) {
 
 	session, err := exchangeWeChatCode(code)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		log.Printf("wechat login failed: %v", redactWeChatSecret(err.Error()))
+		c.JSON(http.StatusBadGateway, gin.H{"message": "wechat login failed"})
 		return
 	}
 	if session.OpenID == "" {
@@ -349,12 +351,15 @@ func loginWithWeChat(c *gin.Context, db *gorm.DB) {
 		}
 
 		openID := session.OpenID
-		user = model.User{Username: wechatUsername(openID), OpenID: &openID, PasswordHash: "-"}
+		user = model.User{Username: temporaryWeChatUsername(), OpenID: &openID, PasswordHash: "-"}
 		if err := db.Create(&user).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to create wechat user"})
 			return
 		}
+		user.Username = wechatUsername(user.ID)
 		registered = true
+	} else if shouldResetWeChatUsername(user.Username, session.OpenID) {
+		user.Username = wechatUsername(user.ID)
 	}
 
 	issueLoginToken(c, db, user, registered)
@@ -491,15 +496,26 @@ func hashToken(token string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func wechatUsername(openID string) string {
-	value := strings.TrimSpace(openID)
-	if len(value) > 32 {
-		value = value[:32]
+func wechatUsername(userID int) string {
+	return fmt.Sprintf("\u5fae\u4fe1\u7528\u6237%d", userID)
+}
+
+func temporaryWeChatUsername() string {
+	data := make([]byte, 4)
+	if _, err := rand.Read(data); err != nil {
+		return fmt.Sprintf("wx_user_%08d", time.Now().UnixNano()%100000000)
 	}
-	if value == "" {
-		value = "user"
-	}
-	return "wx_" + value
+	number := (uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])) % 100000000
+	return fmt.Sprintf("wx_user_%08d", number)
+}
+
+func shouldResetWeChatUsername(username string, openID string) bool {
+	username = strings.TrimSpace(username)
+	return username == "" || strings.HasPrefix(username, "wx_") || (openID != "" && strings.Contains(username, openID))
+}
+
+func redactWeChatSecret(message string) string {
+	return regexp.MustCompile(`(?i)(secret=)[^&\s]+`).ReplaceAllString(message, "${1}REDACTED")
 }
 
 func normalizeLevel(level string) string {
@@ -523,15 +539,47 @@ func normalizeKind(kind string) string {
 
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		origin := c.GetHeader("Origin")
+		if allowed := allowedCORSOrigin(origin); allowed != "" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", allowed)
+			c.Writer.Header().Set("Vary", "Origin")
+			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS")
+			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		}
 
 		if c.Request.Method == http.MethodOptions {
+			if origin != "" && allowedCORSOrigin(origin) == "" {
+				c.AbortWithStatus(http.StatusForbidden)
+				return
+			}
 			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
 
 		c.Next()
 	}
+}
+
+func allowedCORSOrigin(origin string) string {
+	origin = strings.TrimSpace(origin)
+	if origin == "" {
+		return ""
+	}
+
+	allowed := map[string]bool{
+		"https://list.tuoxie.asia": true,
+		"http://list.tuoxie.asia":  true,
+		"http://localhost:18090":   true,
+		"http://127.0.0.1:18090":   true,
+	}
+	for _, extra := range strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",") {
+		extra = strings.TrimSpace(extra)
+		if extra != "" {
+			allowed[extra] = true
+		}
+	}
+	if allowed[origin] {
+		return origin
+	}
+	return ""
 }

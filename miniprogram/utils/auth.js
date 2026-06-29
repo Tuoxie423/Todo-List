@@ -8,7 +8,7 @@ function getCurrentUser() {
     if (user && Number(user.id) > 0 && user.username && user.token) {
       return {
         id: Number(user.id),
-        username: user.username,
+        username: displayUsername(user),
         token: user.token,
       };
     }
@@ -22,11 +22,20 @@ function getCurrentUser() {
 function saveCurrentUser(user) {
   const normalized = {
     id: Number(user.id),
-    username: user.username,
+    username: displayUsername(user),
     token: user.token,
   };
   wx.setStorageSync(authKey, normalized);
   return normalized;
+}
+
+function displayUsername(user) {
+  const id = Number(user && user.id);
+  const username = String((user && user.username) || "").trim();
+  if (id > 0 && (username.startsWith("wx_") || username.indexOf("openid") !== -1)) {
+    return `\u5fae\u4fe1\u7528\u6237${id}`;
+  }
+  return username;
 }
 
 function clearCurrentUser() {
