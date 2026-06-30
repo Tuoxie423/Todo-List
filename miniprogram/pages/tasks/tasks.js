@@ -2,6 +2,7 @@ const auth = require("../../utils/auth");
 const { request } = require("../../utils/request");
 const roomHistory = require("../../utils/roomHistory");
 
+const SHARE_TITLE = "这个工具挺实用，推荐你试试";
 const levels = ["基础", "进阶", "挑战"];
 const listMeta = {
   learning: {
@@ -42,6 +43,12 @@ Page({
   },
 
   onLoad(options) {
+    wx.showShareMenu({
+      withShareTicket: true,
+      menus: ["shareAppMessage", "shareTimeline"],
+    });
+
+
     const room = this.resolveList(options || {});
     if (!room) {
       wx.redirectTo({ url: "/pages/home/home" });
@@ -234,7 +241,34 @@ Page({
       },
     });
   },
+
+  onShareAppMessage() {
+    return {
+      title: SHARE_TITLE,
+      path: buildSharePath(this.data.room),
+    };
+  },
+
+  onShareTimeline() {
+    const room = this.data.room;
+    const query = room
+      ? "roomId=" + encodeURIComponent(room.id) + "&roomName=" + encodeURIComponent(room.name)
+      : "";
+
+    return {
+      title: SHARE_TITLE,
+      query,
+    };
+  },
 });
+
+function buildSharePath(room) {
+  if (!room) {
+    return "/pages/home/home";
+  }
+
+  return "/pages/tasks/tasks?roomId=" + encodeURIComponent(room.id) + "&roomName=" + encodeURIComponent(room.name);
+}
 
 function formatTask(task) {
   return Object.assign({}, task, {

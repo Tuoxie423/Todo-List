@@ -2,6 +2,8 @@ const auth = require("../../utils/auth");
 const { request } = require("../../utils/request");
 const roomHistory = require("../../utils/roomHistory");
 
+const SHARE_TITLE = "这个工具挺实用，推荐你试试";
+
 Page({
   data: {
     user: null,
@@ -11,6 +13,13 @@ Page({
     loading: false,
     history: [],
     hasHistory: false,
+  },
+
+  onLoad() {
+    wx.showShareMenu({
+      withShareTicket: true,
+      menus: ["shareAppMessage", "shareTimeline"],
+    });
   },
 
   async onShow() {
@@ -122,6 +131,20 @@ Page({
       hasHistory: history.length > 0,
       loading: false,
     });
+  },
+
+  onShareAppMessage() {
+    return {
+      title: SHARE_TITLE,
+      path: "/pages/home/home",
+    };
+  },
+
+  onShareTimeline() {
+    return {
+      title: SHARE_TITLE,
+      query: "",
+    };
   },
 });
 
