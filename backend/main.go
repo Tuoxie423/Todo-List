@@ -42,7 +42,6 @@ type createRoomRequest struct {
 type createTaskRequest struct {
 	Title string `json:"title"`
 	Level string `json:"level"`
-	Kind  string `json:"kind"`
 }
 
 type wechatSession struct {
@@ -56,6 +55,15 @@ type authUserResponse struct {
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
+
+const (
+	taskLevelToday   = "今天"
+	taskLevelWeek    = "本周"
+	taskLevelSoon    = "近期"
+	taskLevelSomeday = "有空"
+)
+
+const taskLevelOrderSQL = "CASE level WHEN '" + taskLevelToday + "' THEN 0 WHEN '" + taskLevelWeek + "' THEN 1 WHEN '" + taskLevelSoon + "' THEN 2 WHEN '" + taskLevelSomeday + "' THEN 3 ELSE 3 END"
 
 var exchangeWeChatCode = exchangeWeChatCodeWithAPI
 
@@ -161,6 +169,7 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 
 					var tasks []model.Task
 					if err := db.Where("room_id = ?", roomID).
+						Order(taskLevelOrderSQL).
 						Order("created_at DESC, id DESC").
 						Find(&tasks).Error; err != nil {
 						c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to query tasks"})
@@ -195,7 +204,6 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 						RoomID: roomID,
 						Title:  title,
 						Level:  normalizeLevel(payload.Level),
-						Kind:   normalizeKind(payload.Kind),
 					}
 
 					if err := db.Create(&task).Error; err != nil {
@@ -521,20 +529,11 @@ func redactWeChatSecret(message string) string {
 func normalizeLevel(level string) string {
 	level = strings.TrimSpace(level)
 	switch level {
-	case "基础", "进阶", "挑战", "鍩虹", "杩涢樁", "鎸戞垬":
+	case taskLevelToday, taskLevelWeek, taskLevelSoon, taskLevelSomeday:
 		return level
 	default:
-		return "基础"
+		return taskLevelSomeday
 	}
-}
-
-func normalizeKind(kind string) string {
-	kind = strings.TrimSpace(kind)
-	if kind == "optimization" {
-		return kind
-	}
-
-	return "learning"
 }
 
 func corsMiddleware() gin.HandlerFunc {

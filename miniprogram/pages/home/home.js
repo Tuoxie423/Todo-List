@@ -48,7 +48,7 @@ Page({
 
   async relogin() {
     auth.clearCurrentUser();
-    roomHistory.clearCurrentList();
+    roomHistory.clearCurrentRoom();
     await this.ensureWechatLogin();
     this.refreshHistory();
   },
@@ -110,8 +110,8 @@ Page({
   },
 
   openList(room) {
-    const history = roomHistory.rememberList(room);
-    roomHistory.saveCurrentList(room);
+    const history = roomHistory.rememberRoom(room);
+    roomHistory.saveCurrentRoom(room);
     this.setData({
       history: formatHistory(history),
       hasHistory: history.length > 0,

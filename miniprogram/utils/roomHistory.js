@@ -83,12 +83,8 @@ function isValidRoom(room) {
 module.exports = {
   getHistory,
   rememberRoom,
-  rememberList: rememberRoom,
   clearHistory,
   saveCurrentRoom,
-  saveCurrentList: saveCurrentRoom,
   getCurrentRoom,
-  getCurrentList: getCurrentRoom,
   clearCurrentRoom,
-  clearCurrentList: clearCurrentRoom,
 };

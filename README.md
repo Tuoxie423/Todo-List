@@ -1,4 +1,4 @@
-﻿# 一间清单 Todo-list
+# 一间清单 Todo-list
 
 ![Go](https://img.shields.io/badge/Go-1.26-00ADD8?style=flat-square&logo=go&logoColor=white)
 ![Gin](https://img.shields.io/badge/Gin-Web%20Framework-00B386?style=flat-square)
@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 ![Website](https://img.shields.io/badge/Online-list.tuoxie.asia-orange?style=flat-square)
 
-一个用于学习 Gin 后端开发的多端任务清单项目。用户通过房间名称进入独立任务空间，管理「学习清单」和「任务清单」。
+一个用于学习 Gin 后端开发的多端任务清单项目。用户通过房间名称进入独立任务空间，管理自己的任务清单。
 
 同一套 Gin API 同时支持浏览器端和微信小程序端。
 
@@ -35,9 +35,9 @@ https://list.tuoxie.asia
 
 ## 功能
 
-- 房间创建/进入
-- 房间任务隔离
-- 学习清单、任务清单管理
+- 清单创建/进入
+- 清单任务隔离
+- 任务清单管理
 - 新增、完成/恢复、删除任务
 - 浏览器端和小程序端历史房间记录
 - YAML 配置端口和数据库连接
@@ -110,12 +110,7 @@ PATCH  /api/rooms/:roomID/tasks/:taskID/toggle
 DELETE /api/rooms/:roomID/tasks/:taskID
 ```
 
-`kind` 可选值：
-
-```text
-learning      学习清单
-optimization 任务清单
-```
+`level` 表示时间紧迫度，可选值为 `今天`、`本周`、`近期`、`有空`，任务按这个顺序排序。
 
 ## 测试和构建
 

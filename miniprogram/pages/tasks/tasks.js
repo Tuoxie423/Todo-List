@@ -3,18 +3,18 @@ const { request } = require("../../utils/request");
 const roomHistory = require("../../utils/roomHistory");
 
 const SHARE_TITLE = "这个工具挺实用，推荐你试试";
-const levels = ["基础", "进阶", "挑战"];
-const listMeta = {
-  learning: {
-    titleKey: "learningTitle",
-    levelIndexKey: "learningLevelIndex",
-    added: "已添加学习任务",
-  },
-  optimization: {
-    titleKey: "optimizationTitle",
-    levelIndexKey: "optimizationLevelIndex",
-    added: "已添加任务",
-  },
+const levels = ["今天", "本周", "近期", "有空"];
+const urgencyClassMap = {
+  今天: "today",
+  本周: "week",
+  近期: "soon",
+  有空: "later",
+};
+const urgencyRankMap = {
+  今天: 0,
+  本周: 1,
+  近期: 2,
+  有空: 3,
 };
 
 Page({
@@ -24,22 +24,14 @@ Page({
     apiStatus: "连接中",
     apiOnline: false,
     levels,
-    learningTitle: "",
-    optimizationTitle: "",
-    learningLevelIndex: 0,
-    optimizationLevelIndex: 0,
+    taskTitle: "",
+    taskLevelIndex: 0,
     tasks: [],
-    learningTasks: [],
-    optimizationTasks: [],
-    hasLearningTasks: false,
-    hasOptimizationTasks: false,
+    hasTasks: false,
     totalCount: 0,
     doneCount: 0,
     progressRate: 0,
-    messages: {
-      learning: "",
-      optimization: "",
-    },
+    message: "",
   },
 
   onLoad(options) {
@@ -55,8 +47,8 @@ Page({
       return;
     }
 
-    roomHistory.saveCurrentList(room);
-    roomHistory.rememberList(room);
+    roomHistory.saveCurrentRoom(room);
+    roomHistory.rememberRoom(room);
     this.setData({
       room,
       roomName: room.name,
@@ -75,7 +67,7 @@ Page({
       };
     }
 
-    return roomHistory.getCurrentList();
+    return roomHistory.getCurrentRoom();
   },
 
   async checkHealth() {
@@ -102,82 +94,66 @@ Page({
     try {
       const data = await request(`/api/rooms/${room.id}/tasks`);
       this.updateTasks(data.items || []);
-      this.setAllMessages("列表已更新");
+      this.setMessage("列表已更新");
     } catch (error) {
-      this.setAllMessages(error.message || "无法读取任务");
+      this.setMessage(error.message || "无法读取任务");
     }
   },
 
   onTaskTitleInput(event) {
-    const kind = event.currentTarget.dataset.kind;
-    const meta = listMeta[kind];
-    if (!meta) {
-      return;
-    }
-
     this.setData({
-      [meta.titleKey]: event.detail.value,
+      taskTitle: event.detail.value,
     });
   },
 
   onLevelChange(event) {
-    const kind = event.currentTarget.dataset.kind;
-    const meta = listMeta[kind];
-    if (!meta) {
-      return;
-    }
-
     this.setData({
-      [meta.levelIndexKey]: Number(event.detail.value),
+      taskLevelIndex: Number(event.detail.value),
     });
   },
 
-  async createTask(event) {
-    const kind = event.currentTarget.dataset.kind;
-    const meta = listMeta[kind];
-    if (!meta || !this.data.room) {
+  async createTask() {
+    if (!this.data.room) {
       return;
     }
 
-    const title = this.data[meta.titleKey].trim();
-    const level = levels[this.data[meta.levelIndexKey]];
+    const title = this.data.taskTitle.trim();
+    const level = levels[this.data.taskLevelIndex];
     if (!title) {
-      this.setMessage(kind, "任务标题不能为空");
+      this.setMessage("任务标题不能为空");
       return;
     }
 
     try {
       const task = await request(`/api/rooms/${this.data.room.id}/tasks`, {
         method: "POST",
-        data: { title, level, kind },
+        data: { title, level },
       });
 
       this.updateTasks([task, ...this.data.tasks]);
-      this.setData({ [meta.titleKey]: "" });
-      this.setMessage(kind, meta.added);
+      this.setData({ taskTitle: "" });
+      this.setMessage("已添加任务");
     } catch (error) {
-      this.setMessage(kind, error.message);
+      this.setMessage(error.message);
     }
   },
 
   async toggleTask(event) {
     const id = Number(event.currentTarget.dataset.id);
-    const kind = event.currentTarget.dataset.kind;
 
     try {
       const updated = await request(`/api/rooms/${this.data.room.id}/tasks/${id}/toggle`, {
         method: "PATCH",
       });
       this.updateTasks(this.data.tasks.map((task) => (task.id === id ? updated : task)));
-      this.setMessage(kind, updated.done ? "任务已完成" : "任务已恢复");
+      this.setMessage(updated.done ? "任务已完成" : "任务已恢复");
     } catch (error) {
-      this.setMessage(kind, error.message);
+      this.setMessage(error.message);
     }
   },
 
   deleteTask(event) {
     const id = Number(event.currentTarget.dataset.id);
-    const kind = event.currentTarget.dataset.kind;
 
     wx.showModal({
       title: "删除任务",
@@ -193,52 +169,37 @@ Page({
             method: "DELETE",
           });
           this.updateTasks(this.data.tasks.filter((task) => task.id !== id));
-          this.setMessage(kind, "任务已删除");
+          this.setMessage("任务已删除");
         } catch (error) {
-          this.setMessage(kind, error.message);
+          this.setMessage(error.message);
         }
       },
     });
   },
 
   changeList() {
-    roomHistory.clearCurrentList();
+    roomHistory.clearCurrentRoom();
     wx.redirectTo({ url: "/pages/home/home" });
   },
 
   updateTasks(tasks) {
-    const normalizedTasks = tasks.map(formatTask);
+    const normalizedTasks = sortTasks(tasks.map(formatTask));
     const doneCount = normalizedTasks.filter((task) => task.done).length;
     const totalCount = normalizedTasks.length;
     const progressRate = totalCount === 0 ? 0 : Math.round((doneCount / totalCount) * 100);
 
-    const learningTasks = normalizedTasks.filter((task) => normalizeKind(task.kind) === "learning");
-    const optimizationTasks = normalizedTasks.filter((task) => normalizeKind(task.kind) === "optimization");
-
     this.setData({
       tasks: normalizedTasks,
-      learningTasks,
-      optimizationTasks,
-      hasLearningTasks: learningTasks.length > 0,
-      hasOptimizationTasks: optimizationTasks.length > 0,
+      hasTasks: normalizedTasks.length > 0,
       totalCount,
       doneCount,
       progressRate,
     });
   },
 
-  setMessage(kind, text) {
+  setMessage(text) {
     this.setData({
-      [`messages.${kind}`]: text,
-    });
-  },
-
-  setAllMessages(text) {
-    this.setData({
-      messages: {
-        learning: text,
-        optimization: text,
-      },
+      message: text,
     });
   },
 
@@ -271,14 +232,30 @@ function buildSharePath(room) {
 }
 
 function formatTask(task) {
+  const level = normalizeUrgency(task.level);
   return Object.assign({}, task, {
-    kind: normalizeKind(task.kind),
+    level,
+    urgencyClass: urgencyClassMap[level],
     createdAtText: formatDate(task.createdAt),
   });
 }
 
-function normalizeKind(kind) {
-  return kind === "optimization" ? "optimization" : "learning";
+function normalizeUrgency(level) {
+  return levels.indexOf(level) >= 0 ? level : "有空";
+}
+
+function sortTasks(items) {
+  return items.sort((left, right) => {
+    const leftRank = urgencyRankMap[normalizeUrgency(left.level)];
+    const rightRank = urgencyRankMap[normalizeUrgency(right.level)];
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+
+    const leftTime = new Date(left.createdAt).getTime() || 0;
+    const rightTime = new Date(right.createdAt).getTime() || 0;
+    return rightTime - leftTime;
+  });
 }
 
 function formatDate(value) {

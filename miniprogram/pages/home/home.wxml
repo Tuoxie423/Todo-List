@@ -1,8 +1,8 @@
 <view class="page">
   <view class="hero">
-    <text class="eyebrow">Todo-list</text>
+    <text class="eyebrow">一间清单</text>
     <text class="title">查看你的私人任务清单</text>
-    <text class="lead">小程序会使用微信账号自动登录。每个微信用户拥有独立清单，别人不能访问你的数据。</text>
+    <text class="lead">小程序会使用微信账号自动登录。每个微信用户都有独立清单，别人不能访问你的数据。</text>
   </view>
 
   <view class="entry-panel">
@@ -42,11 +42,11 @@
   <view class="hint-grid">
     <view class="hint">
       <text class="hint-title">微信登录</text>
-      <text class="hint-copy">无需输入账号密码，打开后自动识别当前微信用户</text>
+      <text class="hint-copy">无需输入账号密码，打开后自动识别当前微信用户。</text>
     </view>
     <view class="hint">
       <text class="hint-title">私人清单</text>
-      <text class="hint-copy">清单和任务都绑定到当前微信账号</text>
+      <text class="hint-copy">清单和任务都绑定到当前微信账号。</text>
     </view>
   </view>
 </view>

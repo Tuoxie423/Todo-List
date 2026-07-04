@@ -5,9 +5,9 @@
   ],
   "window": {
     "navigationBarTitleText": "任务清单",
-    "navigationBarBackgroundColor": "#f7f1e4",
+    "navigationBarBackgroundColor": "#EEF4FF",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#f7f1e4"
+    "backgroundColor": "#EEF4FF"
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json"

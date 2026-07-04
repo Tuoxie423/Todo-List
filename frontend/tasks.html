@@ -10,7 +10,7 @@
     <main class="shell">
       <section class="hero-panel" aria-labelledby="page-title">
         <div>
-          <p class="eyebrow">Practice Lab</p>
+          <p class="eyebrow">Todo List</p>
           <h1 id="page-title">任务台</h1>
           <p class="hero-copy">当前清单：<strong id="roomName">加载中</strong></p>
         </div>
@@ -44,55 +44,27 @@
         </aside>
 
         <div class="board-grid">
-          <section class="task-panel" aria-labelledby="learning-title" data-kind="learning">
-            <div class="panel-heading">
-              <div>
-                <p class="eyebrow">Study</p>
-                <h2 id="learning-title">学习清单</h2>
-              </div>
-              <button class="ghost-button" data-action="refresh" type="button">刷新</button>
-            </div>
-
-            <form class="task-form" data-kind="learning">
-              <label class="field">
-                <span>任务标题</span>
-                <input name="title" type="text" maxlength="40" placeholder="例如：新增一个查询接口" required />
-              </label>
-              <label class="field short">
-                <span>难度</span>
-                <select name="level">
-                  <option>基础</option>
-                  <option>进阶</option>
-                  <option>挑战</option>
-                </select>
-              </label>
-              <button class="primary-button" type="submit">添加</button>
-            </form>
-
-            <div class="message" data-role="message" role="status"></div>
-            <ul class="task-list" data-role="task-list" aria-live="polite"></ul>
-          </section>
-
-          <section class="task-panel optimization-panel" aria-labelledby="optimization-title" data-kind="optimization">
+          <section class="task-panel" aria-labelledby="task-title">
             <div class="panel-heading">
               <div>
                 <p class="eyebrow">Tasks</p>
-                <h2 id="optimization-title">任务清单</h2>
+                <h2 id="task-title">任务清单</h2>
               </div>
               <button class="ghost-button" data-action="refresh" type="button">刷新</button>
             </div>
 
-            <form class="task-form" data-kind="optimization">
+            <form class="task-form">
               <label class="field">
                 <span>任务标题</span>
                 <input name="title" type="text" maxlength="40" placeholder="例如：整理部署步骤" required />
               </label>
               <label class="field short">
-                <span>难度</span>
+                <span>紧迫度</span>
                 <select name="level">
-                  <option>基础</option>
-                  <option>进阶</option>
-                  <option>挑战</option>
+                  <option>今天</option>
+                  <option>本周</option>
+                  <option>近期</option>
+                  <option>有空</option>
                 </select>
               </label>
               <button class="primary-button" type="submit">添加</button>

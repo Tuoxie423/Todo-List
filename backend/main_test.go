@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"todo-list/backend/model"
 
@@ -389,8 +390,8 @@ func TestListRoomTasksOnlyAllowsRoomOwner(t *testing.T) {
 	bob := createTestUser(t, db, "bob", "bob-token")
 	roomA := createTestRoom(t, db, alice.ID, "A")
 	roomB := createTestRoom(t, db, bob.ID, "B")
-	db.Create(&model.Task{RoomID: roomA.ID, Title: "A1", Kind: "learning"})
-	db.Create(&model.Task{RoomID: roomB.ID, Title: "B1", Kind: "optimization"})
+	db.Create(&model.Task{RoomID: roomA.ID, Title: "A1"})
+	db.Create(&model.Task{RoomID: roomB.ID, Title: "B1"})
 	router := setupRouter(db)
 
 	response := httptest.NewRecorder()
@@ -420,6 +421,44 @@ func TestListRoomTasksOnlyAllowsRoomOwner(t *testing.T) {
 	}
 }
 
+func TestListRoomTasksOrdersByUrgency(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := setupTestDB(t)
+	alice := createTestUser(t, db, "alice", "alice-token")
+	room := createTestRoom(t, db, alice.ID, "A")
+	now := time.Now()
+	db.Create(&model.Task{RoomID: room.ID, Title: "Later", Level: "有空", CreatedAt: now})
+	db.Create(&model.Task{RoomID: room.ID, Title: "Soon", Level: "近期", CreatedAt: now.Add(-time.Minute)})
+	db.Create(&model.Task{RoomID: room.ID, Title: "Week", Level: "本周", CreatedAt: now.Add(-2 * time.Minute)})
+	db.Create(&model.Task{RoomID: room.ID, Title: "Today", Level: "今天", CreatedAt: now.Add(-3 * time.Minute)})
+	router := setupRouter(db)
+
+	response := httptest.NewRecorder()
+	request := authRequest(http.MethodGet, "/api/rooms/"+strconv.Itoa(room.ID)+"/tasks", "alice-token", nil)
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", response.Code, response.Body.String())
+	}
+
+	var body struct {
+		Items []model.Task `json:"items"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode tasks: %v", err)
+	}
+
+	want := []string{"Today", "Week", "Soon", "Later"}
+	if len(body.Items) != len(want) {
+		t.Fatalf("expected %d tasks, got %+v", len(want), body.Items)
+	}
+	for index, title := range want {
+		if body.Items[index].Title != title {
+			t.Fatalf("task %d expected %q, got order %+v", index, title, body.Items)
+		}
+	}
+}
+
 func TestListRoomTasksRoomNotFound(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := setupTestDB(t)
@@ -442,7 +481,7 @@ func TestCreateRoomTaskSuccess(t *testing.T) {
 	room := createTestRoom(t, db, alice.ID, "Go")
 	router := setupRouter(db)
 
-	body := bytes.NewBufferString(`{"title":"Learn GORM","level":"进阶","kind":"optimization"}`)
+	body := bytes.NewBufferString(`{"title":"Learn GORM","level":"本周"}`)
 	request := authRequest(http.MethodPost, "/api/rooms/"+strconv.Itoa(room.ID)+"/tasks", "alice-token", body)
 	request.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
@@ -459,8 +498,8 @@ func TestCreateRoomTaskSuccess(t *testing.T) {
 	if task.RoomID != room.ID {
 		t.Fatalf("expected room id %d, got %d", room.ID, task.RoomID)
 	}
-	if task.Level != "进阶" || task.Kind != "optimization" {
-		t.Fatalf("unexpected normalized fields: %+v", task)
+	if task.Level != "本周" {
+		t.Fatalf("unexpected normalized level: %+v", task)
 	}
 }
 
@@ -472,7 +511,7 @@ func TestCreateRoomTaskRejectsOtherUsersRoom(t *testing.T) {
 	room := createTestRoom(t, db, alice.ID, "Go")
 	router := setupRouter(db)
 
-	body := bytes.NewBufferString(`{"title":"Steal room","level":"进阶","kind":"optimization"}`)
+	body := bytes.NewBufferString(`{"title":"Steal room","level":"本周"}`)
 	request := authRequest(http.MethodPost, "/api/rooms/"+strconv.Itoa(room.ID)+"/tasks", "bob-token", body)
 	request.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
@@ -483,14 +522,14 @@ func TestCreateRoomTaskRejectsOtherUsersRoom(t *testing.T) {
 	}
 }
 
-func TestCreateRoomTaskNormalizesFields(t *testing.T) {
+func TestCreateRoomTaskNormalizesLevel(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := setupTestDB(t)
 	alice := createTestUser(t, db, "alice", "alice-token")
 	room := createTestRoom(t, db, alice.ID, "Go")
 	router := setupRouter(db)
 
-	body := bytes.NewBufferString(`{"title":"Anything","level":"Other","kind":"Other"}`)
+	body := bytes.NewBufferString(`{"title":"Anything","level":"Other"}`)
 	request := authRequest(http.MethodPost, "/api/rooms/"+strconv.Itoa(room.ID)+"/tasks", "alice-token", body)
 	request.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
@@ -502,11 +541,8 @@ func TestCreateRoomTaskNormalizesFields(t *testing.T) {
 
 	var task model.Task
 	json.Unmarshal(response.Body.Bytes(), &task)
-	if task.Level != "基础" {
-		t.Fatalf("expected default level 基础, got %q", task.Level)
-	}
-	if task.Kind != "learning" {
-		t.Fatalf("expected default kind learning, got %q", task.Kind)
+	if task.Level != "有空" {
+		t.Fatalf("expected default level 有空, got %q", task.Level)
 	}
 }
 

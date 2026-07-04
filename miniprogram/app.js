@@ -1,3 +1,1 @@
-App({
-  globalData: {},
-});
+App({});
