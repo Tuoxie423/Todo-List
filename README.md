@@ -17,9 +17,15 @@
 
 https://list.tuoxie.asia
 
-同名小程序（一间清单）正在发布中。
+同名小程序（一间清单）已发布。
 
-## 预览
+|  |  |
+|-----|-----|
+| <img src="./media/pic4.png" alt="pic4" style="zoom: 50%;" /> | <img src="./media/pic3.png" alt="pic3" style="zoom: 50%;" /> |
+
+
+
+## 网站预览
 
 ![截图](./media/pic1.png)
 

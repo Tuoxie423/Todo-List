@@ -14,10 +14,13 @@ picker {
 }
 
 button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
   padding: 0;
   border-radius: 999rpx;
-  line-height: 1.2;
+  line-height: 1;
   overflow: hidden;
 }
 
