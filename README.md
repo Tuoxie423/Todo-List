@@ -74,7 +74,7 @@ config/        配置示例
 创建数据库：
 
 ```sql
-CREATE DATABASE list DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE gin_practice DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 复制并配置 `config.yaml`：
@@ -128,8 +128,14 @@ go build -buildvcs=false -o todo-list .
 
 ```bash
 node --check frontend/server.js
+node --check frontend/common/api.js
+node --check frontend/common/storage.js
+node --check frontend/common/levels.js
+node --check frontend/common/dom.js
 node --check frontend/home.js
 node --check frontend/app.js
+node --check miniprogram/utils/levels.js
+node --check miniprogram/pages/tasks/tasks.js
 ```
 
 ## License

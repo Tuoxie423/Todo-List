@@ -11,7 +11,7 @@ database:
   port: 3306
   user: your_username
   password: your_password
-  name: list
+  name: gin_practice
   charset: utf8mb4
 
 wechat:

@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -34,21 +33,9 @@ type Config struct {
 	WeChat WeChat `mapstructure:"wechat"`
 }
 
-var Global Config
-
 func (d *DB) DSN() string {
 	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
 		d.User, d.Password, d.Host, d.Port, d.DBName, d.Charset)
-}
-
-func LoadConfig() {
-	cfg, err := Load()
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
-
-	Global = cfg
-	log.Println("config loaded: mode =", Global.Server.Mode, "port =", Global.Server.Port)
 }
 
 func Load() (Config, error) {

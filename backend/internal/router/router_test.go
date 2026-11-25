@@ -1,4 +1,4 @@
-package main
+package router_test
 
 import (
 	"bytes"
@@ -12,7 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"todo-list/backend/model"
+	"todo-list/backend/internal/auth"
+	"todo-list/backend/internal/model"
+	"todo-list/backend/internal/router"
+	"todo-list/backend/internal/wechat"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -41,7 +44,7 @@ func createTestUser(t *testing.T, db *gorm.DB, username string, token string) mo
 	if err != nil {
 		t.Fatalf("hash password: %v", err)
 	}
-	user := model.User{Username: username, PasswordHash: string(hash), AuthTokenHash: hashToken(token)}
+	user := model.User{Username: username, PasswordHash: string(hash), AuthTokenHash: auth.HashToken(token)}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user: %v", err)
 	}
@@ -72,18 +75,33 @@ func authRequest(method string, target string, token string, body *bytes.Buffer)
 	return request
 }
 
+type exchangerFunc func(code string) (wechat.Session, error)
+
+func (f exchangerFunc) ExchangeCode(code string) (wechat.Session, error) {
+	return f(code)
+}
+
+func newTestRouter(t *testing.T, db *gorm.DB) *gin.Engine {
+	t.Helper()
+	return newTestRouterWithExchanger(t, db, func(code string) (wechat.Session, error) {
+		return wechat.Session{}, errors.New("unexpected wechat exchange")
+	})
+}
+
+func newTestRouterWithExchanger(t *testing.T, db *gorm.DB, exchange func(code string) (wechat.Session, error)) *gin.Engine {
+	t.Helper()
+	return router.New(db, exchangerFunc(exchange), nil)
+}
+
 func TestWeChatLoginAutoRegistersAndReusesUser(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := setupTestDB(t)
-	oldExchange := exchangeWeChatCode
-	exchangeWeChatCode = func(code string) (wechatSession, error) {
+	router := newTestRouterWithExchanger(t, db, func(code string) (wechat.Session, error) {
 		if code != "wx-code" {
 			t.Fatalf("unexpected code: %s", code)
 		}
-		return wechatSession{OpenID: "openid-alice"}, nil
-	}
-	defer func() { exchangeWeChatCode = oldExchange }()
-	router := setupRouter(db)
+		return wechat.Session{OpenID: "openid-alice"}, nil
+	})
 
 	first := httptest.NewRecorder()
 	firstRequest := httptest.NewRequest(http.MethodPost, "/api/auth/wechat-login", bytes.NewBufferString(`{"code":"wx-code"}`))
@@ -135,12 +153,9 @@ func TestWeChatLoginRenamesOldOpenIDUsername(t *testing.T) {
 		t.Fatalf("create old wechat user: %v", err)
 	}
 
-	oldExchange := exchangeWeChatCode
-	exchangeWeChatCode = func(code string) (wechatSession, error) {
-		return wechatSession{OpenID: openID}, nil
-	}
-	defer func() { exchangeWeChatCode = oldExchange }()
-	router := setupRouter(db)
+	router := newTestRouterWithExchanger(t, db, func(code string) (wechat.Session, error) {
+		return wechat.Session{OpenID: openID}, nil
+	})
 
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodPost, "/api/auth/wechat-login", bytes.NewBufferString(`{"code":"wx-code"}`))
@@ -169,7 +184,7 @@ func TestWeChatLoginRenamesOldOpenIDUsername(t *testing.T) {
 func TestWeChatLoginValidatesCode(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := setupTestDB(t)
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodPost, "/api/auth/wechat-login", bytes.NewBufferString(`{"code":"   "}`))
@@ -184,12 +199,9 @@ func TestWeChatLoginValidatesCode(t *testing.T) {
 func TestWeChatLoginDoesNotExposeExchangeError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := setupTestDB(t)
-	oldExchange := exchangeWeChatCode
-	exchangeWeChatCode = func(code string) (wechatSession, error) {
-		return wechatSession{}, errors.New(`Get "https://api.weixin.qq.com/sns/jscode2session?appid=wx-test&secret=real-secret&js_code=bad": timeout`)
-	}
-	defer func() { exchangeWeChatCode = oldExchange }()
-	router := setupRouter(db)
+	router := newTestRouterWithExchanger(t, db, func(code string) (wechat.Session, error) {
+		return wechat.Session{}, errors.New(`Get "https://api.weixin.qq.com/sns/jscode2session?appid=wx-test&secret=real-secret&js_code=bad": timeout`)
+	})
 
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodPost, "/api/auth/wechat-login", bytes.NewBufferString(`{"code":"wx-code"}`))
@@ -207,7 +219,7 @@ func TestWeChatLoginDoesNotExposeExchangeError(t *testing.T) {
 func TestLoginAutoRegistersAndStoresPasswordHashAndTokenHash(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := setupTestDB(t)
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"username":" alice ","password":"secret123"}`))
@@ -246,7 +258,7 @@ func TestLoginAutoRegistersAndStoresPasswordHashAndTokenHash(t *testing.T) {
 	if user.AuthTokenHash == "" || user.AuthTokenHash == body.User.Token {
 		t.Fatalf("expected stored auth token to be hashed, got %q", user.AuthTokenHash)
 	}
-	if user.AuthTokenHash != hashToken(body.User.Token) {
+	if user.AuthTokenHash != auth.HashToken(body.User.Token) {
 		t.Fatal("stored auth token hash does not match issued token")
 	}
 }
@@ -254,7 +266,7 @@ func TestLoginAutoRegistersAndStoresPasswordHashAndTokenHash(t *testing.T) {
 func TestLoginExistingUserDoesNotCreateDuplicate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := setupTestDB(t)
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	for i := 0; i < 2; i++ {
 		response := httptest.NewRecorder()
@@ -282,7 +294,7 @@ func TestLoginExistingUserRejectsWrongPassword(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := setupTestDB(t)
 	createTestUser(t, db, "alice", "alice-token")
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"username":"alice","password":"wrong123"}`))
@@ -305,7 +317,7 @@ func TestCreateRoomCreatesAndReusesByNamePerUser(t *testing.T) {
 	db := setupTestDB(t)
 	alice := createTestUser(t, db, "alice", "alice-token")
 	bob := createTestUser(t, db, "bob", "bob-token")
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	first := httptest.NewRecorder()
 	firstRequest := authRequest(http.MethodPost, "/api/rooms", "alice-token", bytes.NewBufferString(`{"name":" Project "}`))
@@ -355,7 +367,7 @@ func TestCreateRoomCreatesAndReusesByNamePerUser(t *testing.T) {
 func TestCreateRoomRequiresLogin(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := setupTestDB(t)
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodPost, "/api/rooms", bytes.NewBufferString(`{"name":"Project"}`))
@@ -371,7 +383,7 @@ func TestCreateRoomValidatesName(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := setupTestDB(t)
 	createTestUser(t, db, "alice", "alice-token")
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	response := httptest.NewRecorder()
 	request := authRequest(http.MethodPost, "/api/rooms", "alice-token", bytes.NewBufferString(`{"name":"   "}`))
@@ -392,7 +404,7 @@ func TestListRoomTasksOnlyAllowsRoomOwner(t *testing.T) {
 	roomB := createTestRoom(t, db, bob.ID, "B")
 	db.Create(&model.Task{RoomID: roomA.ID, Title: "A1"})
 	db.Create(&model.Task{RoomID: roomB.ID, Title: "B1"})
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	response := httptest.NewRecorder()
 	request := authRequest(http.MethodGet, "/api/rooms/"+strconv.Itoa(roomA.ID)+"/tasks", "alice-token", nil)
@@ -431,7 +443,7 @@ func TestListRoomTasksOrdersByUrgency(t *testing.T) {
 	db.Create(&model.Task{RoomID: room.ID, Title: "Soon", Level: "近期", CreatedAt: now.Add(-time.Minute)})
 	db.Create(&model.Task{RoomID: room.ID, Title: "Week", Level: "本周", CreatedAt: now.Add(-2 * time.Minute)})
 	db.Create(&model.Task{RoomID: room.ID, Title: "Today", Level: "今天", CreatedAt: now.Add(-3 * time.Minute)})
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	response := httptest.NewRecorder()
 	request := authRequest(http.MethodGet, "/api/rooms/"+strconv.Itoa(room.ID)+"/tasks", "alice-token", nil)
@@ -463,7 +475,7 @@ func TestListRoomTasksRoomNotFound(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := setupTestDB(t)
 	createTestUser(t, db, "alice", "alice-token")
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	response := httptest.NewRecorder()
 	request := authRequest(http.MethodGet, "/api/rooms/999/tasks", "alice-token", nil)
@@ -479,7 +491,7 @@ func TestCreateRoomTaskSuccess(t *testing.T) {
 	db := setupTestDB(t)
 	alice := createTestUser(t, db, "alice", "alice-token")
 	room := createTestRoom(t, db, alice.ID, "Go")
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	body := bytes.NewBufferString(`{"title":"Learn GORM","level":"本周"}`)
 	request := authRequest(http.MethodPost, "/api/rooms/"+strconv.Itoa(room.ID)+"/tasks", "alice-token", body)
@@ -509,7 +521,7 @@ func TestCreateRoomTaskRejectsOtherUsersRoom(t *testing.T) {
 	alice := createTestUser(t, db, "alice", "alice-token")
 	createTestUser(t, db, "bob", "bob-token")
 	room := createTestRoom(t, db, alice.ID, "Go")
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	body := bytes.NewBufferString(`{"title":"Steal room","level":"本周"}`)
 	request := authRequest(http.MethodPost, "/api/rooms/"+strconv.Itoa(room.ID)+"/tasks", "bob-token", body)
@@ -527,7 +539,7 @@ func TestCreateRoomTaskNormalizesLevel(t *testing.T) {
 	db := setupTestDB(t)
 	alice := createTestUser(t, db, "alice", "alice-token")
 	room := createTestRoom(t, db, alice.ID, "Go")
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	body := bytes.NewBufferString(`{"title":"Anything","level":"Other"}`)
 	request := authRequest(http.MethodPost, "/api/rooms/"+strconv.Itoa(room.ID)+"/tasks", "alice-token", body)
@@ -551,7 +563,7 @@ func TestCreateRoomTaskValidatesTitle(t *testing.T) {
 	db := setupTestDB(t)
 	alice := createTestUser(t, db, "alice", "alice-token")
 	room := createTestRoom(t, db, alice.ID, "Go")
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	body := bytes.NewBufferString(`{"title":"   "}`)
 	request := authRequest(http.MethodPost, "/api/rooms/"+strconv.Itoa(room.ID)+"/tasks", "alice-token", body)
@@ -571,7 +583,7 @@ func TestToggleRoomTask(t *testing.T) {
 	room := createTestRoom(t, db, alice.ID, "Go")
 	task := model.Task{RoomID: room.ID, Title: "Toggle", Done: false}
 	db.Create(&task)
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	response := httptest.NewRecorder()
 	request := authRequest(http.MethodPatch, "/api/rooms/"+strconv.Itoa(room.ID)+"/tasks/"+strconv.Itoa(task.ID)+"/toggle", "alice-token", nil)
@@ -596,7 +608,7 @@ func TestToggleRoomTaskRejectsOtherUsersRoom(t *testing.T) {
 	room := createTestRoom(t, db, alice.ID, "Go")
 	task := model.Task{RoomID: room.ID, Title: "A task"}
 	db.Create(&task)
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	response := httptest.NewRecorder()
 	request := authRequest(http.MethodPatch, "/api/rooms/"+strconv.Itoa(room.ID)+"/tasks/"+strconv.Itoa(task.ID)+"/toggle", "bob-token", nil)
@@ -614,7 +626,7 @@ func TestDeleteRoomTask(t *testing.T) {
 	room := createTestRoom(t, db, alice.ID, "Go")
 	task := model.Task{RoomID: room.ID, Title: "Delete"}
 	db.Create(&task)
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	response := httptest.NewRecorder()
 	request := authRequest(http.MethodDelete, "/api/rooms/"+strconv.Itoa(room.ID)+"/tasks/"+strconv.Itoa(task.ID), "alice-token", nil)
@@ -639,7 +651,7 @@ func TestDeleteRoomTaskRejectsOtherUsersRoom(t *testing.T) {
 	room := createTestRoom(t, db, alice.ID, "Go")
 	task := model.Task{RoomID: room.ID, Title: "Delete"}
 	db.Create(&task)
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	response := httptest.NewRecorder()
 	request := authRequest(http.MethodDelete, "/api/rooms/"+strconv.Itoa(room.ID)+"/tasks/"+strconv.Itoa(task.ID), "bob-token", nil)
@@ -659,7 +671,7 @@ func TestDeleteRoomTaskRejectsOtherUsersRoom(t *testing.T) {
 func TestCORSMiddlewareRestrictsOrigins(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := setupTestDB(t)
-	router := setupRouter(db)
+	router := newTestRouter(t, db)
 
 	allowed := httptest.NewRecorder()
 	allowedRequest := httptest.NewRequest(http.MethodOptions, "/api/auth/login", nil)
