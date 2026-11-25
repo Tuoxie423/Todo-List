@@ -1,9 +1,5 @@
-let apiBase = "http://localhost:18080";
-let currentUser = null;
+const { api, storage, dom } = window.Todo;
 
-const authKey = "taskUser";
-const accountHistoryKey = "taskAccountHistory";
-const roomKey = "taskList";
 const authForm = document.querySelector("#authForm");
 const usernameInput = document.querySelector("#username");
 const passwordInput = document.querySelector("#password");
@@ -19,38 +15,7 @@ const message = document.querySelector("#roomMessage");
 const historyList = document.querySelector("#historyList");
 const clearHistoryButton = document.querySelector("#clearHistoryButton");
 
-async function loadConfig() {
-  try {
-    const response = await fetch("/config.json");
-    if (!response.ok) {
-      throw new Error("config request failed");
-    }
-
-    const config = await response.json();
-    apiBase = config.apiBase || apiBase;
-  } catch (error) {
-    console.warn("Using default API base:", apiBase);
-  }
-}
-
-async function request(path, options = {}) {
-  const headers = { "Content-Type": "application/json", ...options.headers };
-  if (currentUser && currentUser.token) {
-    headers.Authorization = `Bearer ${currentUser.token}`;
-  }
-
-  const response = await fetch(`${apiBase}${path}`, {
-    headers,
-    ...options,
-  });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.message || "Request failed");
-  }
-
-  return data;
-}
+let currentUser = null;
 
 authForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -58,22 +23,22 @@ authForm.addEventListener("submit", async (event) => {
   const username = usernameInput.value.trim();
   const password = passwordInput.value;
   if (!username) {
-    authMessage.textContent = "\u7528\u6237\u540d\u4e0d\u80fd\u4e3a\u7a7a";
+    authMessage.textContent = "用户名不能为空";
     usernameInput.focus();
     return;
   }
   if (password.length < 6) {
-    authMessage.textContent = "\u5bc6\u7801\u81f3\u5c11\u9700\u8981 6 \u4f4d";
+    authMessage.textContent = "密码至少需要 6 位";
     passwordInput.focus();
     return;
   }
 
   const button = authForm.querySelector(".enter-button");
   button.disabled = true;
-  authMessage.textContent = "\u6b63\u5728\u767b\u5f55...";
+  authMessage.textContent = "正在登录...";
 
   try {
-    const data = await request("/api/auth/login", {
+    const data = await api.request("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ username, password }),
     });
@@ -81,7 +46,7 @@ authForm.addEventListener("submit", async (event) => {
     rememberAccount(data.user);
     setCurrentUser(data.user);
     passwordInput.value = "";
-    authMessage.textContent = data.registered ? "\u65b0\u7528\u6237\u5df2\u81ea\u52a8\u6ce8\u518c" : "\u767b\u5f55\u6210\u529f";
+    authMessage.textContent = data.registered ? "新用户已自动注册" : "登录成功";
   } catch (error) {
     authMessage.textContent = translateAuthError(error.message);
   } finally {
@@ -96,7 +61,7 @@ accountHistoryList.addEventListener("click", (event) => {
   }
 
   const userID = Number(button.dataset.userId);
-  const account = readAccountHistory().find((item) => Number(item.id) === userID);
+  const account = storage.getAccountHistory().find((item) => Number(item.id) === userID);
   if (!account) {
     renderAccountHistory();
     return;
@@ -104,11 +69,11 @@ accountHistoryList.addEventListener("click", (event) => {
 
   rememberAccount(account);
   setCurrentUser(account);
-  authMessage.textContent = "\u5df2\u8fdb\u5165\u5386\u53f2\u8d26\u53f7";
+  authMessage.textContent = "已进入历史账号";
 });
 
 clearAccountHistoryButton.addEventListener("click", () => {
-  localStorage.removeItem(accountHistoryKey);
+  storage.clearAccountHistory();
   renderAccountHistory();
 });
 
@@ -116,24 +81,24 @@ form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   if (!currentUser) {
-    authMessage.textContent = "\u8bf7\u5148\u767b\u5f55";
+    authMessage.textContent = "请先登录";
     usernameInput.focus();
     return;
   }
 
   const name = input.value.trim();
   if (!name) {
-    message.textContent = "\u6e05\u5355\u540d\u79f0\u4e0d\u80fd\u4e3a\u7a7a";
+    message.textContent = "清单名称不能为空";
     input.focus();
     return;
   }
 
   const button = form.querySelector(".enter-button");
   button.disabled = true;
-  message.textContent = "\u6b63\u5728\u67e5\u770b\u6e05\u5355...";
+  message.textContent = "正在查看清单...";
 
   try {
-    const room = await request("/api/rooms", {
+    const room = await api.request("/api/rooms", {
       method: "POST",
       body: JSON.stringify({ name }),
     });
@@ -153,7 +118,7 @@ historyList.addEventListener("click", (event) => {
   }
 
   const roomID = Number(button.dataset.roomId);
-  const room = readHistory().find((item) => Number(item.id) === roomID);
+  const room = storage.getRoomHistory().find((item) => Number(item.id) === roomID);
   if (!room) {
     renderHistory();
     return;
@@ -164,68 +129,46 @@ historyList.addEventListener("click", (event) => {
 });
 
 clearHistoryButton.addEventListener("click", () => {
-  localStorage.removeItem(getHistoryKey());
+  storage.clearRoomHistory();
   renderHistory();
 });
 
 logoutButton.addEventListener("click", () => {
-  localStorage.removeItem(authKey);
-  localStorage.removeItem(roomKey);
+  storage.clearCurrentUser();
+  storage.clearCurrentRoom();
   currentUser = null;
   usernameInput.value = "";
   passwordInput.value = "";
-  authMessage.textContent = "\u5df2\u9000\u51fa\u767b\u5f55";
+  authMessage.textContent = "已退出登录";
   message.textContent = "";
   renderSignedOut();
 });
 
 function enterList(room) {
-  localStorage.setItem(roomKey, JSON.stringify(room));
+  storage.saveCurrentRoom(room);
   window.location.href = `./tasks.html?roomId=${encodeURIComponent(room.id)}&roomName=${encodeURIComponent(room.name)}`;
 }
 
 function rememberAccount(user) {
-  const account = {
-    id: Number(user.id),
-    username: user.username,
-    token: user.token,
-    loggedInAt: new Date().toISOString(),
-  };
-  const history = readAccountHistory();
-  const nextHistory = [
-    account,
-    ...history.filter((item) => Number(item.id) !== account.id),
-  ].slice(0, 8);
-
-  localStorage.setItem(accountHistoryKey, JSON.stringify(nextHistory));
+  storage.rememberAccount(user);
   renderAccountHistory();
 }
 
-function readAccountHistory() {
-  try {
-    const history = JSON.parse(localStorage.getItem(accountHistoryKey));
-    return Array.isArray(history) ? history.filter((item) => item && item.id && item.username && item.token) : [];
-  } catch (error) {
-    localStorage.removeItem(accountHistoryKey);
-    return [];
-  }
-}
-
 function renderAccountHistory() {
-  const history = readAccountHistory();
+  const history = storage.getAccountHistory();
   clearAccountHistoryButton.disabled = history.length === 0;
 
   if (history.length === 0) {
-    accountHistoryList.innerHTML = `<p class="history-empty">\u8fd8\u6ca1\u6709\u767b\u5f55\u8fc7\u7684\u8d26\u53f7</p>`;
+    accountHistoryList.innerHTML = `<p class="history-empty">还没有登录过的账号</p>`;
     return;
   }
 
   accountHistoryList.innerHTML = history
     .map((account) => {
-      const loggedInAt = account.loggedInAt ? formatVisitedAt(account.loggedInAt) : "\u6700\u8fd1";
+      const loggedInAt = account.loggedInAt ? formatVisitedAt(account.loggedInAt) : "最近";
       return `
         <button class="history-item" type="button" data-user-id="${account.id}">
-          ${escapeHTML(account.username)}
+          ${dom.escapeHTML(account.username)}
           <span>${loggedInAt}</span>
         </button>
       `;
@@ -234,28 +177,12 @@ function renderAccountHistory() {
 }
 
 function setCurrentUser(user) {
-  currentUser = {
-    id: Number(user.id),
-    username: user.username,
-    token: user.token,
-  };
-  localStorage.setItem(authKey, JSON.stringify(currentUser));
+  currentUser = storage.saveCurrentUser(user);
   renderSignedIn();
 }
 
 function loadCurrentUser() {
-  try {
-    const savedUser = JSON.parse(localStorage.getItem(authKey));
-    if (savedUser && Number(savedUser.id) > 0 && savedUser.username && savedUser.token) {
-      currentUser = {
-        id: Number(savedUser.id),
-        username: savedUser.username,
-        token: savedUser.token,
-      };
-    }
-  } catch (error) {
-    localStorage.removeItem(authKey);
-  }
+  currentUser = storage.getCurrentUser();
 }
 
 function renderSignedIn() {
@@ -279,49 +206,25 @@ function renderSignedOut() {
 }
 
 function rememberList(room) {
-  const history = readHistory();
-  const nextHistory = [
-    {
-      id: Number(room.id),
-      name: room.name,
-      visitedAt: new Date().toISOString(),
-    },
-    ...history.filter((item) => Number(item.id) !== Number(room.id)),
-  ].slice(0, 6);
-
-  localStorage.setItem(getHistoryKey(), JSON.stringify(nextHistory));
+  storage.rememberRoom(room);
   renderHistory();
 }
 
-function readHistory() {
-  if (!currentUser) {
-    return [];
-  }
-
-  try {
-    const history = JSON.parse(localStorage.getItem(getHistoryKey()));
-    return Array.isArray(history) ? history.filter((item) => item && item.id && item.name) : [];
-  } catch (error) {
-    localStorage.removeItem(getHistoryKey());
-    return [];
-  }
-}
-
 function renderHistory() {
-  const history = readHistory();
+  const history = storage.getRoomHistory();
   clearHistoryButton.disabled = history.length === 0;
 
   if (history.length === 0) {
-    historyList.innerHTML = `<p class="history-empty">\u8fd8\u6ca1\u6709\u67e5\u770b\u8fc7\u6e05\u5355</p>`;
+    historyList.innerHTML = `<p class="history-empty">还没有查看过清单</p>`;
     return;
   }
 
   historyList.innerHTML = history
     .map((room) => {
-      const visitedAt = room.visitedAt ? formatVisitedAt(room.visitedAt) : "\u6700\u8fd1";
+      const visitedAt = room.visitedAt ? formatVisitedAt(room.visitedAt) : "最近";
       return `
         <button class="history-item" type="button" data-room-id="${room.id}">
-          ${escapeHTML(room.name)}
+          ${dom.escapeHTML(room.name)}
           <span>${visitedAt}</span>
         </button>
       `;
@@ -329,14 +232,10 @@ function renderHistory() {
     .join("");
 }
 
-function getHistoryKey() {
-  return currentUser ? `taskListHistory:${currentUser.id}` : "taskListHistory";
-}
-
 function formatVisitedAt(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return "\u6700\u8fd1";
+    return "最近";
   }
 
   return date.toLocaleString("zh-CN", {
@@ -349,33 +248,28 @@ function formatVisitedAt(value) {
 
 function translateAuthError(messageText) {
   const map = {
-    "request body must be JSON": "\u8bf7\u6c42\u4f53\u5fc5\u987b\u662f JSON",
-    "username is required": "\u7528\u6237\u540d\u4e0d\u80fd\u4e3a\u7a7a",
-    "username cannot exceed 40 characters": "\u7528\u6237\u540d\u4e0d\u80fd\u8d85\u8fc7 40 \u4e2a\u5b57\u7b26",
-    "password must be at least 6 characters": "\u5bc6\u7801\u81f3\u5c11\u9700\u8981 6 \u4f4d",
-    "incorrect password": "\u5bc6\u7801\u4e0d\u6b63\u786e",
+    "request body must be JSON": "请求体必须是 JSON",
+    "username is required": "用户名不能为空",
+    "username cannot exceed 40 characters": "用户名不能超过 40 个字符",
+    "password must be at least 6 characters": "密码至少需要 6 位",
+    "incorrect password": "密码不正确",
   };
 
   return map[messageText] || messageText;
 }
 
-function escapeHTML(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
 async function init() {
-  await loadConfig();
+  await api.loadConfig();
+  const notice = storage.consumeLoginNotice();
   loadCurrentUser();
   if (currentUser) {
     renderSignedIn();
     return;
   }
   renderSignedOut();
+  if (notice) {
+    authMessage.textContent = notice;
+  }
 }
 
 init();

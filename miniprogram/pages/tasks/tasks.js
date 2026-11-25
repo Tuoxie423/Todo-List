@@ -1,21 +1,9 @@
 const auth = require("../../utils/auth");
 const { request } = require("../../utils/request");
 const roomHistory = require("../../utils/roomHistory");
+const taskLevels = require("../../utils/levels");
 
 const SHARE_TITLE = "这个工具挺实用，推荐你试试";
-const levels = ["今天", "本周", "近期", "有空"];
-const urgencyClassMap = {
-  今天: "today",
-  本周: "week",
-  近期: "soon",
-  有空: "later",
-};
-const urgencyRankMap = {
-  今天: 0,
-  本周: 1,
-  近期: 2,
-  有空: 3,
-};
 
 Page({
   data: {
@@ -23,7 +11,7 @@ Page({
     roomName: "加载中",
     apiStatus: "连接中",
     apiOnline: false,
-    levels,
+    levels: taskLevels.levels,
     taskTitle: "",
     taskLevelIndex: 0,
     tasks: [],
@@ -118,7 +106,7 @@ Page({
     }
 
     const title = this.data.taskTitle.trim();
-    const level = levels[this.data.taskLevelIndex];
+    const level = taskLevels.levels[this.data.taskLevelIndex];
     if (!title) {
       this.setMessage("任务标题不能为空");
       return;
@@ -183,7 +171,7 @@ Page({
   },
 
   updateTasks(tasks) {
-    const normalizedTasks = sortTasks(tasks.map(formatTask));
+    const normalizedTasks = taskLevels.sortTasks(tasks.map(formatTask));
     const doneCount = normalizedTasks.filter((task) => task.done).length;
     const totalCount = normalizedTasks.length;
     const progressRate = totalCount === 0 ? 0 : Math.round((doneCount / totalCount) * 100);
@@ -232,29 +220,11 @@ function buildSharePath(room) {
 }
 
 function formatTask(task) {
-  const level = normalizeUrgency(task.level);
+  const level = taskLevels.normalize(task.level);
   return Object.assign({}, task, {
     level,
-    urgencyClass: urgencyClassMap[level],
+    urgencyClass: taskLevels.classFor(level),
     createdAtText: formatDate(task.createdAt),
-  });
-}
-
-function normalizeUrgency(level) {
-  return levels.indexOf(level) >= 0 ? level : "有空";
-}
-
-function sortTasks(items) {
-  return items.sort((left, right) => {
-    const leftRank = urgencyRankMap[normalizeUrgency(left.level)];
-    const rightRank = urgencyRankMap[normalizeUrgency(right.level)];
-    if (leftRank !== rightRank) {
-      return leftRank - rightRank;
-    }
-
-    const leftTime = new Date(left.createdAt).getTime() || 0;
-    const rightTime = new Date(right.createdAt).getTime() || 0;
-    return rightTime - leftTime;
   });
 }
 

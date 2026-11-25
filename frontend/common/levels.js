@@ -1,0 +1,46 @@
+// 任务紧迫度的展示与排序规则，网页端只在这里维护一份。
+(function (global) {
+  const Todo = (global.Todo = global.Todo || {});
+
+  const list = ["今天", "本周", "近期", "有空"];
+  const fallback = "有空";
+  const classMap = {
+    今天: "today",
+    本周: "week",
+    近期: "soon",
+    有空: "later",
+  };
+  const rankMap = {
+    今天: 0,
+    本周: 1,
+    近期: 2,
+    有空: 3,
+  };
+
+  function normalize(level) {
+    return list.indexOf(level) >= 0 ? level : fallback;
+  }
+
+  function classFor(level) {
+    return classMap[normalize(level)];
+  }
+
+  function rankOf(level) {
+    return rankMap[normalize(level)];
+  }
+
+  function sortTasks(items) {
+    return [...items].sort((left, right) => {
+      const rankDiff = rankOf(left.level) - rankOf(right.level);
+      if (rankDiff !== 0) {
+        return rankDiff;
+      }
+
+      const leftTime = new Date(left.createdAt).getTime() || 0;
+      const rightTime = new Date(right.createdAt).getTime() || 0;
+      return rightTime - leftTime;
+    });
+  }
+
+  Todo.levels = { list, fallback, normalize, classFor, rankOf, sortTasks };
+})(window);

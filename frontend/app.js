@@ -1,19 +1,7 @@
-let apiBase = "http://localhost:18080";
+const { api, storage, levels, dom } = window.Todo;
+
 let currentUser = null;
 let currentList = null;
-const authKey = "taskUser";
-const urgencyClassMap = {
-  今天: "today",
-  本周: "week",
-  近期: "soon",
-  有空: "later",
-};
-const urgencyRankMap = {
-  今天: 0,
-  本周: 1,
-  近期: 2,
-  有空: 3,
-};
 
 const elements = {
   apiStatus: document.querySelector("#apiStatus"),
@@ -31,56 +19,8 @@ const elements = {
 
 let tasks = [];
 
-async function request(path, options = {}) {
-  const headers = { "Content-Type": "application/json", ...options.headers };
-  if (currentUser && currentUser.token) {
-    headers.Authorization = `Bearer ${currentUser.token}`;
-  }
-
-  const response = await fetch(`${apiBase}${path}`, {
-    headers,
-    ...options,
-  });
-
-  if (response.status === 204) {
-    return null;
-  }
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.message || "请求失败");
-  }
-
-  return data;
-}
-
-async function loadConfig() {
-  try {
-    const response = await fetch("/config.json");
-    if (!response.ok) {
-      throw new Error("config request failed");
-    }
-
-    const config = await response.json();
-    apiBase = config.apiBase || apiBase;
-  } catch (error) {
-    console.warn("Using default API base:", apiBase);
-  }
-}
-
 function loadCurrentUser() {
-  try {
-    const savedUser = JSON.parse(localStorage.getItem(authKey));
-    if (savedUser && Number(savedUser.id) > 0 && savedUser.username && savedUser.token) {
-      currentUser = {
-        id: Number(savedUser.id),
-        username: savedUser.username,
-        token: savedUser.token,
-      };
-    }
-  } catch (error) {
-    localStorage.removeItem(authKey);
-  }
+  currentUser = storage.getCurrentUser();
 }
 
 function requireUser() {
@@ -88,35 +28,22 @@ function requireUser() {
     return true;
   }
 
-  localStorage.removeItem("taskList");
+  storage.clearCurrentRoom();
   window.location.href = "./home.html";
   return false;
 }
+
 function loadCurrentList() {
   const params = new URLSearchParams(window.location.search);
   const roomID = Number(params.get("roomId"));
   const roomName = params.get("roomName");
 
   if (roomID > 0 && roomName) {
-    currentList = {
-      id: roomID,
-      name: roomName,
-    };
-    localStorage.setItem("taskList", JSON.stringify(currentList));
+    currentList = storage.saveCurrentRoom({ id: roomID, name: roomName });
     return;
   }
 
-  try {
-    const savedList = JSON.parse(localStorage.getItem("taskList"));
-    if (savedList && Number(savedList.id) > 0 && savedList.name) {
-      currentList = {
-        id: Number(savedList.id),
-        name: savedList.name,
-      };
-    }
-  } catch (error) {
-    localStorage.removeItem("taskList");
-  }
+  currentList = storage.getCurrentRoom();
 }
 
 function requireList() {
@@ -131,7 +58,7 @@ function requireList() {
 
 async function checkHealth() {
   try {
-    await request("/health");
+    await api.request("/health");
     elements.apiStatus.textContent = "在线";
     elements.statusDot.className = "status-dot is-online";
   } catch (error) {
@@ -142,8 +69,8 @@ async function checkHealth() {
 
 async function loadTasks() {
   try {
-    const data = await request(`/api/rooms/${currentList.id}/tasks`);
-    tasks = sortTasks(data.items || []);
+    const data = await api.request(`/api/rooms/${currentList.id}/tasks`);
+    tasks = levels.sortTasks(data.items || []);
     renderAll();
     setMessage("列表已更新");
   } catch (error) {
@@ -165,7 +92,7 @@ async function createTask(event) {
   }
 
   try {
-    const task = await request(`/api/rooms/${currentList.id}/tasks`, {
+    const task = await api.request(`/api/rooms/${currentList.id}/tasks`, {
       method: "POST",
       body: JSON.stringify({
         title,
@@ -173,7 +100,7 @@ async function createTask(event) {
       }),
     });
 
-    tasks = sortTasks([task, ...tasks]);
+    tasks = levels.sortTasks([task, ...tasks]);
     form.reset();
     renderAll();
     setMessage("已添加任务");
@@ -184,7 +111,7 @@ async function createTask(event) {
 
 async function toggleTask(id) {
   try {
-    const updated = await request(`/api/rooms/${currentList.id}/tasks/${id}/toggle`, { method: "PATCH" });
+    const updated = await api.request(`/api/rooms/${currentList.id}/tasks/${id}/toggle`, { method: "PATCH" });
     tasks = tasks.map((task) => (task.id === id ? updated : task));
     renderAll();
     setMessage(updated.done ? "任务已完成" : "任务已恢复");
@@ -195,7 +122,7 @@ async function toggleTask(id) {
 
 async function deleteTask(id) {
   try {
-    await request(`/api/rooms/${currentList.id}/tasks/${id}`, { method: "DELETE" });
+    await api.request(`/api/rooms/${currentList.id}/tasks/${id}`, { method: "DELETE" });
     tasks = tasks.filter((task) => task.id !== id);
     renderAll();
     setMessage("任务已删除");
@@ -226,15 +153,15 @@ function renderTask(task) {
     minute: "2-digit",
   });
 
-  const urgency = normalizeUrgency(task.level);
-  const urgencyClass = urgencyClassMap[urgency];
+  const urgency = levels.normalize(task.level);
+  const urgencyClass = levels.classFor(urgency);
 
   return `
     <li class="task-item ${task.done ? "is-done" : ""}">
       <button class="toggle-button" type="button" aria-label="切换任务状态" data-action="toggle" data-id="${task.id}">✓</button>
       <div>
-        <p class="task-title">${escapeHTML(task.title)}</p>
-        <p class="task-meta"><span class="urgency-badge urgency-${urgencyClass}">${escapeHTML(urgency)}</span><span>${createdAt}</span></p>
+        <p class="task-title">${dom.escapeHTML(task.title)}</p>
+        <p class="task-meta"><span class="urgency-badge urgency-${urgencyClass}">${dom.escapeHTML(urgency)}</span><span>${createdAt}</span></p>
       </div>
       <button class="danger-button" type="button" aria-label="删除任务" data-action="delete" data-id="${task.id}">×</button>
     </li>
@@ -254,31 +181,10 @@ function setMessage(text) {
   elements.message.textContent = text;
 }
 
-function normalizeUrgency(level) {
-  return Object.prototype.hasOwnProperty.call(urgencyClassMap, level) ? level : "有空";
-}
-
-function sortTasks(items) {
-  return [...items].sort((left, right) => {
-    const leftRank = urgencyRankMap[normalizeUrgency(left.level)];
-    const rightRank = urgencyRankMap[normalizeUrgency(right.level)];
-    if (leftRank !== rightRank) {
-      return leftRank - rightRank;
-    }
-
-    const leftTime = new Date(left.createdAt).getTime() || 0;
-    const rightTime = new Date(right.createdAt).getTime() || 0;
-    return rightTime - leftTime;
-  });
-}
-
-function escapeHTML(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+function populateLevels() {
+  elements.taskForm.elements.level.innerHTML = levels.list
+    .map((level) => `<option>${level}</option>`)
+    .join("");
 }
 
 elements.taskForm.addEventListener("submit", createTask);
@@ -299,12 +205,13 @@ elements.taskList.addEventListener("click", (event) => {
 });
 
 elements.changeListButton.addEventListener("click", () => {
-  localStorage.removeItem("taskList");
+  storage.clearCurrentRoom();
   window.location.href = "./home.html";
 });
 
 async function init() {
-  await loadConfig();
+  populateLevels();
+  await api.loadConfig();
   loadCurrentUser();
   if (!requireUser()) {
     return;
